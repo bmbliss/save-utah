@@ -35,8 +35,9 @@ module OpenStates
 
     # Fetches Utah bills, optionally with embedded vote data
     # Pass include_votes: true to get individual legislator vote records
-    def utah_bills(session: nil, page: 1, per_page: 50, include_votes: false)
-      params = { jurisdiction: "Utah", per_page: per_page, page: page }
+    # OpenStates v3 caps per_page at 20
+    def utah_bills(session: nil, page: 1, per_page: 20, include_votes: false)
+      params = { jurisdiction: "Utah", per_page: [per_page, 20].min, page: page }
       params[:session] = session if session.present?
       params[:include] = "votes" if include_votes
 

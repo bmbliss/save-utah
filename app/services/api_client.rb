@@ -33,16 +33,32 @@ class ApiClient
   end
 
   # Makes a GET request and returns parsed response body.
-  # Handles common HTTP errors with meaningful exceptions.
+  # Retries up to MAX_RETRIES times on rate limit (429) with exponential backoff.
+  MAX_RETRIES = 3
+
   def get(path, params = {})
-    response = connection.get(path, params)
-    response.body
-  rescue Faraday::TooManyRequestsError => e
-    raise RateLimitError, "Rate limit exceeded: #{e.message}"
-  rescue Faraday::ResourceNotFound => e
-    raise NotFoundError, "Resource not found: #{path}"
-  rescue Faraday::Error => e
-    raise ApiError, "API request failed: #{e.message}"
+    retries = 0
+
+    begin
+      response = connection.get(path, params)
+      response.body
+    rescue Faraday::TooManyRequestsError => e
+      retries += 1
+      if retries <= MAX_RETRIES
+        wait = 2**retries  # 2s, 4s, 8s
+        log("Rate limited. Waiting #{wait}s before retry #{retries}/#{MAX_RETRIES}...")
+        sleep(wait)
+        retry
+      end
+      raise RateLimitError, "Rate limit exceeded after #{MAX_RETRIES} retries: #{e.message}"
+    rescue Faraday::ResourceNotFound => e
+      raise NotFoundError, "Resource not found: #{path}"
+    rescue Faraday::Error => e
+      # Extract response body for better debugging of API errors
+      body = e.respond_to?(:response) && e.response.is_a?(Hash) ? e.response[:body] : nil
+      detail = body ? " — Response: #{body}" : ""
+      raise ApiError, "API request failed: #{e.message}#{detail}"
+    end
   end
 
   # Logs import progress to stdout (visible in rake task output)
