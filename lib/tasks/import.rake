@@ -34,8 +34,18 @@ namespace :import do
     CongressGov::VoteImporter.new.import
   end
 
-  desc "Import state floor votes from Utah Legislature API"
+  desc "Import state floor votes from OpenStates API (primary source for state votes)"
   task state_votes: :environment do
+    OpenStates::VoteImporter.new.import
+  end
+
+  desc "Import state floor votes from OpenStates API"
+  task openstates_votes: :environment do
+    OpenStates::VoteImporter.new.import
+  end
+
+  desc "Import state floor votes from Utah Legislature API (if bill detail includes votes)"
+  task utah_legislature_votes: :environment do
     UtahLegislature::VoteImporter.new.import
   end
 

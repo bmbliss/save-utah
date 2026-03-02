@@ -1,6 +1,6 @@
 module CongressGov
   # HTTP client for the Congress.gov API (api.congress.gov/v3)
-  # Docs: https://api.congress.gov/
+  # Docs: https://github.com/LibraryOfCongress/api.congress.gov/
   # Rate limit: 5,000 requests/hour with API key
   class Client < ApiClient
     def base_url
@@ -44,15 +44,24 @@ module CongressGov
     end
 
     # Fetches House roll call votes
+    # Response key is "houseRollCallVotes" per API docs
     def house_votes(congress: 119, session: 1, limit: 50)
       data = get("/house-vote/#{congress}/#{session}", { limit: limit })
-      data.dig("votes") || []
+      data.dig("houseRollCallVotes") || []
     end
 
-    # Fetches a specific House roll call vote
+    # Fetches a specific House roll call vote detail
     def house_vote(congress, session, roll_number)
       data = get("/house-vote/#{congress}/#{session}/#{roll_number}")
       data.dig("vote")
+    end
+
+    # Fetches individual member votes for a specific roll call
+    # Member votes are a SEPARATE endpoint from the vote detail
+    # GET /house-vote/{congress}/{session}/{rollCallNumber}/members
+    def house_vote_members(congress, session, roll_number)
+      data = get("/house-vote/#{congress}/#{session}/#{roll_number}/members")
+      data.dig("members") || []
     end
 
     private

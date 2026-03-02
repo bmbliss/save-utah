@@ -27,7 +27,13 @@ Automated data pipeline that pulls elected official profiles, legislation, and v
 - Importing data for states other than Utah
 - Storing raw API responses
 
-### 1.4 Related Specifications
+### 1.4 API Documentation Links
+
+- **Congress.gov API:** https://github.com/LibraryOfCongress/api.congress.gov/
+- **Utah Legislature API:** https://le.utah.gov/data/developer.htm
+- **OpenStates API v3:** https://docs.openstates.org/api-v3/
+
+### 1.5 Related Specifications
 
 - [Architecture](./architecture.md) — System-level overview
 - [Data Model](./data-model.md) — Database schema the importers write to
@@ -51,8 +57,10 @@ Automated data pipeline that pulls elected official profiles, legislation, and v
 │                                                               │
 │  CongressGov::          UtahLegislature::    OpenStates::     │
 │  ├─ MemberImporter      ├─ LegislatorImp     ├─ PeopleImp   │
-│  ├─ BillImporter        ├─ BillImporter      └─ BillImp     │
-│  └─ VoteImporter        └─ VoteImporter                     │
+│  ├─ BillImporter        ├─ BillImporter      ├─ BillImp     │
+│  └─ VoteImporter        └─ VoteImporter      └─ VoteImp*    │
+│                              (backup)         (*primary for  │
+│                                                state votes)  │
 │                                                               │
 │  Each importer wraps a Client and maps API → Model            │
 └──────────────────────┬───────────────────────────────────────┘
@@ -92,7 +100,8 @@ app/services/
 └── open_states/
     ├── client.rb                    # OpenStates v3 API wrapper
     ├── people_importer.rb           # Supplementary people data
-    └── bill_importer.rb             # Fallback bill data
+    ├── bill_importer.rb             # Fallback bill data
+    └── vote_importer.rb             # PRIMARY source for state votes
 
 lib/tasks/
 └── import.rake                      # Rake task definitions
@@ -142,47 +151,50 @@ end
 
 **File:** `app/services/congress_gov/client.rb`
 **Base URL:** `https://api.congress.gov/v3`
+**Docs:** https://github.com/LibraryOfCongress/api.congress.gov/
 **Auth:** `CONGRESS_GOV_API_KEY` appended as query parameter
 **Rate Limit:** 5,000 requests/hour
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
-| `utah_members` | `GET /member?stateCode=UT&currentMember=true` | Array of member objects |
-| `member(bioguide_id)` | `GET /member/{id}` | Single member detail |
+| `utah_members` | `GET /member?stateCode=UT&currentMember=true` | Array of sparse member objects (name, bioguideId, partyName, terms) |
+| `member(bioguide_id)` | `GET /member/{id}` | Full member detail (firstName, lastName, phone, website, etc.) |
 | `bills(congress, limit, offset)` | `GET /bill/{congress}` | Paginated bill list |
 | `bill(congress, type, number)` | `GET /bill/{congress}/{type}/{number}` | Single bill detail |
 | `bill_actions(congress, type, number)` | `GET /bill/{congress}/{type}/{number}/actions` | Bill action history |
-| `house_votes(congress, session, limit)` | `GET /house-vote/{congress}/{session}` | House roll call votes |
+| `house_votes(congress, session, limit)` | `GET /house-vote/{congress}/{session}` | House roll call votes (key: `houseRollCallVotes`) |
 | `house_vote(congress, session, roll)` | `GET /house-vote/{congress}/{session}/{roll}` | Single vote detail |
+| `house_vote_members(congress, session, roll)` | `GET /house-vote/{congress}/{session}/{roll}/members` | Individual member votes for a roll call |
 
 ### 4.2 UtahLegislature::Client
 
 **File:** `app/services/utah_legislature/client.rb`
 **Base URL:** `https://glen.le.utah.gov`
-**Auth:** `UTAH_LEGISLATURE_TOKEN` appended to URL
+**Docs:** https://le.utah.gov/data/developer.htm
+**Auth:** `UTAH_LEGISLATURE_TOKEN` appended to URL **path** (not query param)
 **Rate Limits:** 1 request/hour (bills), 1 request/day (legislators)
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
-| `legislators(year:)` | `GET /legislators` | Array of legislator objects |
-| `legislator(id)` | `GET /legislator/{id}` | Single legislator detail |
-| `bills(session:)` | `GET /bills/{session}` | Array of bill objects |
-| `bill(session, number)` | `GET /bill/{session}/{number}` | Single bill with embedded votes |
-| `bill_votes(session, number)` | Embedded in bill detail | Vote data |
+| `legislators` | `GET /legislators/{token}` | Array of legislator objects |
+| `bills(session:)` | `GET /bills/{session}/billlist/{token}` | Array of bill objects |
+| `bill(session, number)` | `GET /bills/{session}/{number}/{token}` | Single bill with embedded votes |
+| `bill_votes(session, number)` | Embedded in bill detail | Vote data (may be empty — use OpenStates as primary) |
 
 ### 4.3 OpenStates::Client
 
 **File:** `app/services/open_states/client.rb`
 **Base URL:** `https://v3.openstates.org`
+**Docs:** https://docs.openstates.org/api-v3/
 **Auth:** `OPENSTATES_API_KEY` in `X-API-KEY` header
-**Role:** Supplementary/fallback source
+**Role:** Supplementary/fallback source + PRIMARY for state votes
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
-| `utah_people(chamber:)` | `GET /people?jurisdiction=Utah` | Array of people |
+| `utah_people(chamber:)` | `GET /people?jurisdiction=Utah` | Array of people (chamber must be "upper" or "lower") |
 | `person(id)` | `GET /people/{id}` | Single person detail |
-| `utah_bills(session, page, per_page)` | `GET /bills?jurisdiction=Utah` | Paginated bills |
-| `bill(id)` | `GET /bills/{id}` | Single bill detail |
+| `utah_bills(session, page, per_page, include_votes:)` | `GET /bills?jurisdiction=Utah` | Paginated bills (pass `include_votes: true` for embedded vote data) |
+| `bill(id, include_votes:)` | `GET /bills/{id}` | Single bill detail |
 
 ---
 
@@ -218,15 +230,21 @@ end
 
 **File:** `app/services/congress_gov/member_importer.rb`
 
-| API Field | Model Field | Transformation |
+**Two-step fetch:** The list endpoint (`/member?stateCode=UT`) returns sparse data (inverted `name`, `bioguideId`, `partyName`, `terms`). A detail call (`/member/{bioguideId}`) is made for each member to get full fields. Utah only has ~6-8 members so the extra API calls are trivial.
+
+| API Field (Detail) | Model Field | Transformation |
 |-----------|-------------|----------------|
 | `bioguideId` | `bioguide_id` | Direct |
-| `name` | `first_name`, `last_name` | Split on space |
-| `partyName` | `party` | Direct |
-| `state` | — | Filtered to "Utah" |
+| `firstName`, `lastName` | `first_name`, `last_name` | From detail response |
+| `directOrderName` | `full_name` | Fallback to "firstName lastName" |
+| `partyName` | `party` | Normalized |
 | `terms.current.chamber` | `position_type` | "Senate" → `us_senator`, "House" → `us_representative` |
 | `terms.current.district` | `district` | Direct |
-| `depiction.imageUrl` | `photo_url` | Direct |
+| `depiction.imageUrl` | `photo_url` | Available on list and detail |
+| `officialWebsiteUrl` | `website_url` | Detail only |
+| `addressInformation.officePhone` | `phone` | Detail only |
+
+**Fallback:** If detail lacks name fields, parses inverted `name` from list ("Lee, Mike" → first: "Mike", last: "Lee").
 
 **Derived fields:**
 - `level` → always `federal`
@@ -294,22 +312,26 @@ end
 **File:** `app/services/congress_gov/vote_importer.rb`
 
 - Fetches House roll call votes for a given congress/session
+- List uses `rollCallNumber` field (not `rollNumber`)
+- **Member votes come from a SEPARATE endpoint** (`house_vote_members`), not embedded in vote detail
+- Bill linkage uses top-level `legislationNumber`/`legislationType` (not nested under `"bill"`)
 - Caches Utah reps by `bioguide_id` for fast lookup
 - Links votes to bills by matching `congress_bill_id`
 
-**Position Normalization:**
+**Position Normalization (field: `voteCast`):**
 | API Value | Model Position |
 |-----------|----------------|
-| `"yea"`, `"aye"` | `yes` |
-| `"nay"` | `no` |
-| `"present"` | `present` |
-| `"not voting"` | `not_voting` |
+| `"Aye"`, `"Yea"` | `yes` |
+| `"Nay"`, `"No"` | `no` |
+| `"Present"` | `present` |
+| `"Not Voting"` | `not_voting` |
 
 #### UtahLegislature::VoteImporter
 
 **File:** `app/services/utah_legislature/vote_importer.rb`
 
-- Vote data is embedded in bill detail JSON (no separate endpoint)
+- **Backup source** — Utah Legislature API may not have dedicated vote endpoints
+- Vote data is embedded in bill detail JSON (if available)
 - Caches state reps by `utah_leg_id`
 - Iterates state bills, extracts vote arrays, creates Vote records
 
@@ -320,6 +342,25 @@ end
 | `"nay"`, `"no"`, `"n"` | `no` |
 | `"absent"`, `"abs"` | `not_voting` |
 | `"abstain"` | `abstain` |
+
+#### OpenStates::VoteImporter
+
+**File:** `app/services/open_states/vote_importer.rb`
+
+- **PRIMARY source for state votes** (Utah Legislature API has no dedicated vote endpoints)
+- Fetches bills with `include: "votes"` to get embedded vote data
+- Each bill response contains `votes[]` with individual vote records
+- Matches voters to Representatives via `openstates_id` (preferred) or name (fallback)
+- Links to existing `Bill` records via `openstates_bill_id` or `bill_number`
+
+**Position Normalization (field: `option`):**
+| API Value | Model Position |
+|-----------|----------------|
+| `"yes"`, `"yea"`, `"aye"` | `yes` |
+| `"no"`, `"nay"` | `no` |
+| `"absent"`, `"excused"`, `"not voting"` | `not_voting` |
+| `"abstain"` | `abstain` |
+| `"present"` | `present` |
 
 ---
 
@@ -339,11 +380,13 @@ import:all
 │   └── import:state_bills         (UtahLegislature::BillImporter)
 └── import:all_votes
     ├── import:federal_votes       (CongressGov::VoteImporter)
-    └── import:state_votes         (UtahLegislature::VoteImporter)
+    └── import:state_votes         (OpenStates::VoteImporter)  ← changed from UtahLegislature
 
-# Supplementary (not included in import:all)
+# Supplementary / Fallback (not included in import:all)
 import:openstates_people           (OpenStates::PeopleImporter)
 import:openstates_bills            (OpenStates::BillImporter)
+import:openstates_votes            (OpenStates::VoteImporter — alias for state_votes)
+import:utah_legislature_votes      (UtahLegislature::VoteImporter — backup if bill detail has votes)
 ```
 
 ### 6.2 Usage
@@ -360,9 +403,11 @@ rake import:state_bills
 rake import:federal_votes
 rake import:state_votes
 
-# Supplementary
+# Supplementary / Fallback
 rake import:openstates_people
 rake import:openstates_bills
+rake import:openstates_votes           # alias for state_votes
+rake import:utah_legislature_votes     # backup — if bill detail has votes
 ```
 
 ### 6.3 Import Order Dependency

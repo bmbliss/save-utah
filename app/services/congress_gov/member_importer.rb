@@ -1,6 +1,12 @@
 module CongressGov
   # Imports Utah's federal delegation from the Congress.gov API.
   # Maps Congress.gov member data to our Representative model.
+  #
+  # The list endpoint (/member?stateCode=UT) returns a sparse response with
+  # only name (inverted), bioguideId, partyName, district, depiction, and terms.
+  # A detail call (/member/{bioguideId}) is needed for firstName, lastName,
+  # directOrderName, officialWebsiteUrl, phone, etc.
+  # Utah only has ~6-8 members so the extra API calls are trivial.
   class MemberImporter
     def initialize
       @client = Client.new
@@ -15,23 +21,39 @@ module CongressGov
         return
       end
 
-      members.each do |member_data|
-        import_member(member_data)
+      imported = 0
+      members.each do |list_data|
+        bioguide_id = list_data["bioguideId"]
+        next if bioguide_id.blank?
+
+        # Fetch full detail for each member (list endpoint is sparse)
+        begin
+          detail = @client.member(bioguide_id)
+          next unless detail
+
+          if import_member(list_data, detail)
+            imported += 1
+          end
+        rescue ApiClient::ApiError => e
+          puts "  Error fetching detail for #{bioguide_id}: #{e.message}"
+        end
       end
 
-      puts "  Done. #{members.size} members processed."
+      puts "  Done. #{imported} members imported/updated."
     end
 
     private
 
-    def import_member(data)
-      bioguide_id = data["bioguideId"]
-      return if bioguide_id.blank?
+    # Merges sparse list data with full detail data to build the representative.
+    # Detail fields take priority when available.
+    def import_member(list_data, detail)
+      bioguide_id = detail["bioguideId"] || list_data["bioguideId"]
+      return false if bioguide_id.blank?
 
       rep = Representative.find_or_initialize_by(bioguide_id: bioguide_id)
 
-      # Determine position type from terms data
-      terms = data["terms"]&.dig("item") || []
+      # Determine position type from terms data (available on both list and detail)
+      terms = detail["terms"]&.dig("item") || list_data["terms"]&.dig("item") || []
       current_term = terms.max_by { |t| t["startYear"].to_i }
       chamber = current_term&.dig("chamber")
 
@@ -41,7 +63,7 @@ module CongressGov
       else :us_representative
       end
 
-      # Extract district from current term
+      # District from current term
       district = current_term&.dig("district")
 
       # Build title
@@ -51,25 +73,48 @@ module CongressGov
                 district ? "U.S. Representative, District #{district}" : "U.S. Representative"
               end
 
+      # Name fields from detail (not available on list endpoint)
+      first_name = detail["firstName"]
+      last_name = detail["lastName"]
+      full_name = detail["directOrderName"] || "#{first_name} #{last_name}"
+
+      # If detail didn't have names, try parsing the inverted "name" from list
+      if first_name.blank? && list_data["name"].present?
+        parts = list_data["name"].split(",", 2).map(&:strip)
+        last_name = parts[0]
+        first_name = parts[1]
+        full_name = "#{first_name} #{last_name}"
+      end
+
+      # Photo from depiction (available on both list and detail)
+      photo_url = detail.dig("depiction", "imageUrl") || list_data.dig("depiction", "imageUrl")
+
+      # Website and phone from detail only
+      website_url = detail["officialWebsiteUrl"]
+      phone = detail.dig("addressInformation", "officePhone")
+
       rep.assign_attributes(
-        first_name: data["firstName"],
-        last_name: data["lastName"],
-        full_name: data["directOrderName"] || "#{data['firstName']} #{data['lastName']}",
+        first_name: first_name,
+        last_name: last_name,
+        full_name: full_name,
         title: title,
         position_type: position_type,
         level: :federal,
         chamber: chamber == "Senate" ? "Senate" : "House",
-        party: normalize_party(data["partyName"]),
+        party: normalize_party(detail["partyName"] || list_data["partyName"]),
         district: district&.to_s,
-        photo_url: data.dig("depiction", "imageUrl"),
-        website_url: data["officialWebsiteUrl"],
-        active: data["currentMember"] != false
+        photo_url: photo_url,
+        website_url: website_url,
+        phone: phone,
+        active: detail["currentMember"] != false
       )
 
       if rep.save
-        puts "  #{rep.new_record? ? 'Created' : 'Updated'}: #{rep.display_name}"
+        puts "  #{rep.display_name}"
+        true
       else
-        puts "  FAILED: #{rep.full_name} — #{rep.errors.full_messages.join(', ')}"
+        puts "  FAILED: #{full_name} — #{rep.errors.full_messages.join(', ')}"
+        false
       end
     end
 

@@ -46,14 +46,16 @@ module OpenStates
       jurisdiction = data.dig("jurisdiction", "name") || data.dig("jurisdiction_id")
       level = jurisdiction&.include?("United States") ? :federal : :state
 
-      from_org = data.dig("fromOrganization", "classification") || data.dig("from_organization", "classification")
+      # v3 uses snake_case: from_organization
+      from_org = data.dig("from_organization", "classification") || data.dig("fromOrganization", "classification")
       chamber = case from_org&.downcase
       when "upper", "senate" then "Senate"
       when "lower", "house" then "House"
       else nil
       end
 
-      session_data = data["session"] || data["legislativeSession"]
+      # v3 uses snake_case: legislative_session
+      session_data = data["session"] || data["legislative_session"] || data["legislativeSession"]
       session_name = session_data.is_a?(Hash) ? session_data["name"] : session_data
 
       bill.assign_attributes(
@@ -64,7 +66,8 @@ module OpenStates
         chamber: chamber,
         session_year: extract_year(session_name),
         session_name: session_name,
-        last_action_on: parse_date(data["latestActionDate"] || data["latest_action_date"]),
+        # v3 uses snake_case: latest_action_date
+        last_action_on: parse_date(data["latest_action_date"] || data["latestActionDate"]),
         data_source: "openstates"
       )
 

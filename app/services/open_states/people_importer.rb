@@ -1,6 +1,9 @@
 module OpenStates
   # Imports Utah legislators from the OpenStates API as a supplementary data source.
   # Primarily used to fill in gaps or as a fallback when the Utah Legislature API is unavailable.
+  #
+  # OpenStates v3 returns snake_case fields: given_name, family_name,
+  # current_role.org_classification, current_role.district, etc.
   class PeopleImporter
     def initialize
       @client = Client.new
@@ -34,15 +37,15 @@ module OpenStates
       # Try to match by openstates_id first, then by name
       rep = Representative.find_by(openstates_id: openstates_id)
       rep ||= Representative.find_by(
-        first_name: data["givenName"] || data["given_name"],
-        last_name: data["familyName"] || data["family_name"],
+        first_name: data["given_name"] || data["givenName"],
+        last_name: data["family_name"] || data["familyName"],
         level: :state
       )
       rep ||= Representative.new(openstates_id: openstates_id)
 
-      # Determine position type
-      current_role = data.dig("currentRole") || {}
-      org_classification = current_role["orgClassification"] || data.dig("current_role", "org_classification")
+      # Determine position type — v3 uses snake_case "current_role"
+      current_role = data["current_role"] || data.dig("currentRole") || {}
+      org_classification = current_role["org_classification"] || current_role["orgClassification"]
 
       position_type = case org_classification&.downcase
       when "upper", "senate" then :state_senator
@@ -51,9 +54,11 @@ module OpenStates
       end
 
       chamber = position_type == :state_senator ? "Senate" : "House"
-      district = current_role["district"] || data.dig("current_role", "district")
-      first_name = data["givenName"] || data["given_name"]
-      last_name = data["familyName"] || data["family_name"]
+      district = current_role["district"]
+
+      # v3 uses snake_case field names
+      first_name = data["given_name"] || data["givenName"]
+      last_name = data["family_name"] || data["familyName"]
 
       rep.assign_attributes(
         first_name: first_name,
@@ -63,7 +68,7 @@ module OpenStates
         position_type: position_type,
         level: :state,
         chamber: chamber,
-        party: normalize_party(data["party"] || data.dig("primaryParty")),
+        party: normalize_party(data["party"] || data["primary_party"] || data.dig("primaryParty")),
         district: district&.to_s,
         photo_url: data["image"],
         openstates_id: openstates_id,

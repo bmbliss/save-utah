@@ -1,6 +1,12 @@
 module CongressGov
   # Imports federal vote data from the Congress.gov API.
   # Links roll call votes back to bills and Utah representatives.
+  #
+  # Key API behaviors:
+  # - house_votes list returns "rollCallNumber" (not "rollNumber")
+  # - Member votes are on a SEPARATE endpoint (/house-vote/.../members)
+  # - Bill fields (legislationNumber, legislationType) are top-level, not nested
+  # - Vote position field is "voteCast" (not "voteType" or "vote")
   class VoteImporter
     def initialize
       @client = Client.new
@@ -25,11 +31,12 @@ module CongressGov
 
       imported = 0
       votes_data.each do |vote_data|
-        roll_number = vote_data["rollNumber"] || vote_data["number"]
+        # API returns "rollCallNumber" per docs
+        roll_number = vote_data["rollCallNumber"] || vote_data["rollNumber"] || vote_data["number"]
         next unless roll_number
 
-        # Fetch the detailed vote record with individual member votes
         begin
+          # Fetch the vote detail (for bill linkage, date, etc.)
           detail = @client.house_vote(congress, session, roll_number)
           next unless detail
 
@@ -37,8 +44,9 @@ module CongressGov
           bill = find_bill_for_vote(detail)
           next unless bill
 
-          # Process individual member votes for Utah reps
-          member_votes = detail.dig("members", "member") || detail.dig("members") || []
+          # Fetch individual member votes from the SEPARATE members endpoint
+          member_votes = @client.house_vote_members(congress, session, roll_number)
+
           member_votes.each do |mv|
             process_member_vote(mv, bill, detail)
           end
@@ -52,11 +60,13 @@ module CongressGov
       puts "  Done. #{imported} roll calls processed."
     end
 
-    # Attempts to find the bill associated with a roll call vote
+    # Attempts to find the bill associated with a roll call vote.
+    # Per API docs, legislationNumber and legislationType are top-level fields
+    # on the vote detail (not nested under "bill").
     def find_bill_for_vote(vote_detail)
-      legislation_number = vote_detail.dig("bill", "number") || vote_detail.dig("legislationNumber")
-      legislation_type = vote_detail.dig("bill", "type") || vote_detail.dig("legislationType")
-      congress = vote_detail.dig("bill", "congress") || vote_detail.dig("congress")
+      legislation_number = vote_detail["legislationNumber"] || vote_detail.dig("bill", "number")
+      legislation_type = vote_detail["legislationType"] || vote_detail.dig("bill", "type")
+      congress = vote_detail["congress"]
 
       return nil if legislation_number.blank? || legislation_type.blank?
 
@@ -72,7 +82,8 @@ module CongressGov
       rep = @utah_reps[bioguide_id]
       return unless rep # Skip non-Utah members
 
-      position = normalize_position(member_vote["voteType"] || member_vote["vote"])
+      # API returns "voteCast" per docs (not "voteType" or "vote")
+      position = normalize_position(member_vote["voteCast"] || member_vote["voteType"] || member_vote["vote"])
       return unless position
 
       vote_date = parse_date(vote_detail["date"] || vote_detail["actionDate"])
@@ -89,13 +100,23 @@ module CongressGov
       end
     end
 
+    # Normalizes Congress.gov vote positions to our enum values.
+    # Congress.gov uses: "Aye", "Nay", "Present", "Not Voting"
     def normalize_position(vote_type)
-      case vote_type&.downcase
-      when "yea", "aye", "yes" then :yes
-      when "nay", "no" then :no
-      when "present" then :present
-      when "not voting" then :not_voting
-      else nil
+      case vote_type&.strip
+      when "Aye", "Yea" then :yes
+      when "Nay", "No" then :no
+      when "Present" then :present
+      when "Not Voting" then :not_voting
+      else
+        # Fallback: try case-insensitive match
+        case vote_type&.downcase&.strip
+        when "aye", "yea", "yes" then :yes
+        when "nay", "no" then :no
+        when "present" then :present
+        when "not voting" then :not_voting
+        else nil
+        end
       end
     end
 
