@@ -43,6 +43,24 @@ rake import:state_votes          # Utah Legislature API — floor votes
 - Ruby 4.0 has frozen string literals by default — use `.dup` when mutating strings
 - Enums use Rails 8 positional integer style (`enum :position_type, { us_senator: 0, ... }`)
 
+## Specs Workflow
+
+The `specs/` directory contains detailed specification documents for all major systems. **Always** follow this workflow:
+
+1. **Before starting any task**: Read relevant specs in `specs/` for context before making changes. Cross-reference the specs index (`specs/README.md`) to identify which specs relate to your work.
+2. **During implementation**: Ensure your changes align with the documented architecture, data models, and patterns described in the specs.
+3. **After completing a task**: Evaluate whether any specs need to be created or updated to reflect the changes. If the task introduced new models, controllers, services, views, or changed existing behavior documented in a spec, update the relevant spec(s) using the spec skill.
+
+### Current Specs
+
+- `specs/architecture.md` — Overall system architecture
+- `specs/data-model.md` — Database schema and model relationships
+- `specs/representatives-system.md` — Representatives feature
+- `specs/bills-system.md` — Bills feature
+- `specs/data-import-system.md` — API import services and rake tasks
+- `specs/action-scripts-system.md` — Action scripts / call scripts
+- `specs/frontend-system.md` — Tailwind, layouts, shared partials
+
 ## API Keys Required
 
 - `CONGRESS_GOV_API_KEY` — free at api.congress.gov
