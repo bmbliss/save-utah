@@ -1,0 +1,116 @@
+<%# ===== HERO SECTION ===== %>
+<section class="relative bg-utah-navy overflow-hidden">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-utah-red via-utah-navy to-utah-navy-dark"></div>
+  </div>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+    <div class="text-center">
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+        Hold Utah's Leaders
+        <span class="block text-utah-gold">Accountable</span>
+      </h1>
+      <p class="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-gray-300 leading-relaxed">
+        Track how your elected officials vote, see who represents you, and take action
+        to protect Utah's public lands, air quality, and future.
+      </p>
+      <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+        <%= link_to representatives_path, class: "inline-flex items-center justify-center px-8 py-3.5 rounded-lg bg-utah-red text-white font-bold text-lg hover:bg-utah-red-dark transition-colors shadow-lg" do %>
+          Find Your Representatives
+          <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+          </svg>
+        <% end %>
+        <%= link_to "View Bills & Votes", bills_path,
+            class: "inline-flex items-center justify-center px-8 py-3.5 rounded-lg border-2 border-utah-gold text-utah-gold font-bold text-lg hover:bg-utah-gold hover:text-utah-navy transition-colors" %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%# ===== FEATURED REPRESENTATIVES (Spotlight) ===== %>
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="text-center mb-10">
+    <h2 class="text-3xl font-extrabold text-utah-navy">Featured Officials</h2>
+    <p class="mt-2 text-gray-600">Key Utah leaders and their latest actions</p>
+  </div>
+
+  <% spotlight_reps = @spotlight_items.any? ? @spotlight_items.map(&:featurable).compact : Representative.active.executives.limit(4) %>
+  <% if spotlight_reps.any? %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <% spotlight_reps.each do |rep| %>
+        <%= render "shared/rep_card", representative: rep %>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="text-center text-gray-500 py-8">Representatives will appear here once data is imported.</p>
+  <% end %>
+
+  <div class="text-center mt-8">
+    <%= link_to "View All Representatives →", representatives_path,
+        class: "text-utah-red font-semibold hover:text-utah-red-dark transition-colors" %>
+  </div>
+</section>
+
+<%# ===== RECENT VOTES ===== %>
+<section class="bg-white py-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-10">
+      <h2 class="text-3xl font-extrabold text-utah-navy">Recent Votes</h2>
+      <p class="mt-2 text-gray-600">Notable bills and how Utah's delegation voted</p>
+    </div>
+
+    <% if @recent_bills.any? %>
+      <div class="space-y-4">
+        <% @recent_bills.each do |bill| %>
+          <%= render "shared/bill_card", bill: bill %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-center text-gray-500 py-8">Voting data will appear here once bills are imported.</p>
+    <% end %>
+
+    <div class="text-center mt-8">
+      <%= link_to "View All Bills →", bills_path,
+          class: "text-utah-red font-semibold hover:text-utah-red-dark transition-colors" %>
+    </div>
+  </div>
+</section>
+
+<%# ===== TAKE ACTION ===== %>
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="text-center mb-10">
+    <h2 class="text-3xl font-extrabold text-utah-navy">Take Action</h2>
+    <p class="mt-2 text-gray-600">Make your voice heard — it only takes a few minutes</p>
+  </div>
+
+  <% if @action_scripts.any? %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <% @action_scripts.each do |script| %>
+        <%= render "shared/script_card", script: script %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-white rounded-xl shadow-sm border border-utah-sand-dark p-8 text-center">
+      <div class="text-4xl mb-4">📞</div>
+      <h3 class="text-lg font-bold text-utah-navy">Action scripts coming soon</h3>
+      <p class="mt-2 text-gray-600">We're preparing call and email scripts to help you contact your representatives.</p>
+    </div>
+  <% end %>
+</section>
+
+<%# ===== MISSION BLURB ===== %>
+<section class="bg-utah-navy py-16">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h2 class="text-3xl font-extrabold text-white">Why Save Utah?</h2>
+    <p class="mt-6 text-lg text-gray-300 leading-relaxed">
+      Utah is one of the most beautiful states in the nation — from the red rock arches of Moab to the
+      pristine peaks of the Wasatch. But our public lands, clean air, and natural heritage face constant
+      threats from decisions made in Salt Lake City and Washington D.C. <strong class="text-utah-gold">Save Utah</strong>
+      gives you the tools to see exactly how your elected officials vote and make your voice heard.
+    </p>
+    <div class="mt-8">
+      <%= link_to "Learn More About Our Mission →", about_path,
+          class: "inline-flex items-center text-utah-gold font-semibold hover:text-utah-gold-light transition-colors text-lg" %>
+    </div>
+  </div>
+</section>

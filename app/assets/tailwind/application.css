@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* ===== Utah-inspired color palette ===== */
+@theme {
+  /* Primary: Utah Red (red rock, arches) */
+  --color-utah-red: #BF2C34;
+  --color-utah-red-light: #D94F56;
+  --color-utah-red-dark: #8C1F25;
+
+  /* Secondary: Navy (trust, authority) */
+  --color-utah-navy: #1B2A4A;
+  --color-utah-navy-light: #2D4470;
+  --color-utah-navy-dark: #111B30;
+
+  /* Accent: Gold (desert sunlight) */
+  --color-utah-gold: #D4A843;
+  --color-utah-gold-light: #E0C06A;
+  --color-utah-gold-dark: #B08A2E;
+
+  /* Sky: Utah blue sky */
+  --color-utah-sky: #4A90D9;
+  --color-utah-sky-light: #7AB3F0;
+  --color-utah-sky-dark: #2E6DB5;
+
+  /* Sand: Warm background */
+  --color-utah-sand: #F5F0E8;
+  --color-utah-sand-light: #FAF8F3;
+  --color-utah-sand-dark: #E8DFD0;
+
+  /* Sage: Natural green accent */
+  --color-utah-sage: #6B8F71;
+  --color-utah-sage-light: #8DB393;
+  --color-utah-sage-dark: #4F6E54;
+
+  /* Font families */
+  --font-display: "Inter", "system-ui", "sans-serif";
+  --font-body: "Inter", "system-ui", "sans-serif";
+}

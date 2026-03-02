@@ -1,0 +1,61 @@
+<% content_for(:title) { "Representatives — Save Utah" } %>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <h1 class="text-3xl font-extrabold text-utah-navy">Utah's Representatives</h1>
+  <p class="mt-2 text-gray-600">All elected officials representing Utah at the state and federal level</p>
+
+  <%# === FILTERS === %>
+  <div class="mt-8 bg-white rounded-xl shadow-sm border border-utah-sand-dark p-4 sm:p-6">
+    <%= form_with url: representatives_path, method: :get, class: "flex flex-col sm:flex-row flex-wrap gap-3 items-end", data: { turbo: false } do |f| %>
+      <div class="flex-1 min-w-[180px]">
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Search</label>
+        <%= f.text_field :search, value: params[:search], placeholder: "Search by name...",
+            class: "w-full rounded-lg border-gray-300 shadow-sm focus:border-utah-sky focus:ring-utah-sky text-sm" %>
+      </div>
+      <div class="min-w-[140px]">
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Level</label>
+        <%= f.select :level, options_for_select([["All Levels", ""], ["Federal", "federal"], ["State", "state"]], params[:level]),
+            {}, class: "w-full rounded-lg border-gray-300 shadow-sm focus:border-utah-sky focus:ring-utah-sky text-sm" %>
+      </div>
+      <div class="min-w-[140px]">
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Chamber</label>
+        <%= f.select :chamber, options_for_select([["All Chambers", ""], ["Senate", "Senate"], ["House", "House"]], params[:chamber]),
+            {}, class: "w-full rounded-lg border-gray-300 shadow-sm focus:border-utah-sky focus:ring-utah-sky text-sm" %>
+      </div>
+      <div class="min-w-[140px]">
+        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Party</label>
+        <%= f.select :party, options_for_select([["All Parties", ""], ["Republican", "Republican"], ["Democrat", "Democrat"], ["Independent", "Independent"]], params[:party]),
+            {}, class: "w-full rounded-lg border-gray-300 shadow-sm focus:border-utah-sky focus:ring-utah-sky text-sm" %>
+      </div>
+      <div>
+        <%= f.submit "Filter", class: "px-6 py-2 bg-utah-red text-white font-semibold rounded-lg hover:bg-utah-red-dark transition-colors cursor-pointer text-sm" %>
+      </div>
+      <% if params[:search].present? || params[:level].present? || params[:chamber].present? || params[:party].present? %>
+        <div>
+          <%= link_to "Clear", representatives_path, class: "px-4 py-2 text-gray-600 hover:text-utah-red font-medium text-sm" %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# === REPRESENTATIVE CARDS === %>
+  <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <% @representatives.each do |rep| %>
+      <%= render "shared/rep_card", representative: rep %>
+    <% end %>
+  </div>
+
+  <% if @representatives.empty? %>
+    <div class="text-center py-12">
+      <p class="text-gray-500 text-lg">No representatives found matching your filters.</p>
+      <%= link_to "Clear filters", representatives_path, class: "mt-2 inline-block text-utah-red hover:text-utah-red-dark font-semibold" %>
+    </div>
+  <% end %>
+
+  <%# === PAGINATION === %>
+  <% if @pagy.last > 1 %>
+    <div class="mt-8 flex justify-center">
+      <%== pagy(:offset, @pagy).series_nav_js %>
+    </div>
+  <% end %>
+</div>

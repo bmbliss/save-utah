@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Save Utah" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Save Utah">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="<%= content_for(:description) || 'Track Utah elected officials, their voting records, and take action. Hold your leaders accountable.' %>">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= display_meta_tags site: "Save Utah" %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full bg-utah-sand font-body text-utah-navy flex flex-col">
+    <%# === NAVBAR === %>
+    <nav class="bg-utah-navy shadow-lg sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <%# Logo / Brand %>
+          <div class="flex items-center">
+            <%= link_to root_path, class: "flex items-center space-x-2 group" do %>
+              <span class="text-2xl font-extrabold tracking-tight text-white group-hover:text-utah-gold transition-colors">
+                SAVE<span class="text-utah-red">UTAH</span>
+              </span>
+            <% end %>
+          </div>
+
+          <%# Desktop nav links %>
+          <div class="hidden md:flex items-center space-x-1">
+            <%= link_to "Representatives", representatives_path,
+                class: "px-4 py-2 rounded-md text-sm font-semibold transition-colors #{request.path.start_with?('/representatives') ? 'text-utah-gold bg-utah-navy-dark' : 'text-gray-200 hover:text-white hover:bg-utah-navy-dark'}" %>
+            <%= link_to "Bills", bills_path,
+                class: "px-4 py-2 rounded-md text-sm font-semibold transition-colors #{request.path.start_with?('/bills') ? 'text-utah-gold bg-utah-navy-dark' : 'text-gray-200 hover:text-white hover:bg-utah-navy-dark'}" %>
+            <%= link_to "About", about_path,
+                class: "px-4 py-2 rounded-md text-sm font-semibold transition-colors #{request.path == '/about' ? 'text-utah-gold bg-utah-navy-dark' : 'text-gray-200 hover:text-white hover:bg-utah-navy-dark'}" %>
+          </div>
+
+          <%# Mobile hamburger button %>
+          <div class="md:hidden flex items-center">
+            <button type="button" data-controller="mobile-nav" data-action="click->mobile-nav#toggle"
+                    class="text-gray-200 hover:text-white p-2 rounded-md">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <%# Mobile menu (hidden by default) %>
+      <div id="mobile-menu" class="md:hidden hidden bg-utah-navy-dark">
+        <div class="px-4 pt-2 pb-4 space-y-1">
+          <%= link_to "Representatives", representatives_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
+          <%= link_to "Bills", bills_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
+          <%= link_to "About", about_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
+        </div>
+      </div>
+    </nav>
+
+    <%# === FLASH MESSAGES === %>
+    <% if notice.present? %>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        <div class="bg-utah-sage-light border border-utah-sage rounded-lg p-4 text-utah-sage-dark">
+          <%= notice %>
+        </div>
+      </div>
+    <% end %>
+    <% if alert.present? %>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        <div class="bg-red-100 border border-utah-red-light rounded-lg p-4 text-utah-red-dark">
+          <%= alert %>
+        </div>
+      </div>
+    <% end %>
+
+    <%# === MAIN CONTENT === %>
+    <main class="flex-grow">
+      <%= yield %>
+    </main>
+
+    <%# === FOOTER === %>
+    <footer class="bg-utah-navy-dark text-gray-300 mt-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <%# Brand + mission %>
+          <div>
+            <span class="text-xl font-extrabold text-white tracking-tight">
+              SAVE<span class="text-utah-red">UTAH</span>
+            </span>
+            <p class="mt-3 text-sm text-gray-400 leading-relaxed">
+              Tracking Utah's elected officials and their voting records.
+              Empowering citizens to hold leaders accountable.
+            </p>
+          </div>
+
+          <%# Quick links %>
+          <div>
+            <h3 class="text-sm font-semibold text-utah-gold uppercase tracking-wider">Navigate</h3>
+            <ul class="mt-3 space-y-2">
+              <li><%= link_to "Representatives", representatives_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>
+              <li><%= link_to "Bills & Votes", bills_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>
+              <li><%= link_to "About", about_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>
+            </ul>
+          </div>
+
+          <%# Data sources %>
+          <div>
+            <h3 class="text-sm font-semibold text-utah-gold uppercase tracking-wider">Data Sources</h3>
+            <ul class="mt-3 space-y-2">
+              <li><span class="text-sm text-gray-400">Congress.gov API</span></li>
+              <li><span class="text-sm text-gray-400">Utah Legislature (le.utah.gov)</span></li>
+              <li><span class="text-sm text-gray-400">OpenStates</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-10 pt-8 border-t border-gray-700 text-center">
+          <p class="text-xs text-gray-500">
+            &copy; <%= Date.today.year %> Save Utah. Not affiliated with any government entity.
+            Data sourced from public records.
+          </p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

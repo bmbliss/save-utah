@@ -1,0 +1,43 @@
+<%# Shared bill card partial — used on homepage and bills index %>
+<%= link_to bill_path(bill), class: "block bg-white rounded-xl shadow-sm border border-utah-sand-dark hover:shadow-md hover:border-utah-gold transition-all group p-5" do %>
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div class="min-w-0 flex-1">
+      <div class="flex flex-wrap gap-1.5 mb-2">
+        <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-utah-navy text-white">
+          <%= bill.bill_number %>
+        </span>
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold <%= bill.level_federal? ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' %>">
+          <%= bill.level_federal? ? "Federal" : "State" %>
+        </span>
+        <% if bill.status.present? %>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+            <%= bill.status %>
+          </span>
+        <% end %>
+      </div>
+
+      <h3 class="font-bold text-utah-navy group-hover:text-utah-red transition-colors line-clamp-2">
+        <%= bill.title %>
+      </h3>
+
+      <% if bill.editorial_summary.present? %>
+        <p class="mt-1.5 text-sm text-gray-600 line-clamp-2"><%= bill.editorial_summary %></p>
+      <% elsif bill.summary.present? %>
+        <p class="mt-1.5 text-sm text-gray-600 line-clamp-2"><%= truncate(bill.summary, length: 150) %></p>
+      <% end %>
+
+      <% if bill.last_action_on.present? %>
+        <p class="mt-2 text-xs text-gray-400">Last action: <%= bill.last_action_on.strftime("%b %d, %Y") %></p>
+      <% end %>
+    </div>
+
+    <%# Mini vote summary if votes exist %>
+    <% summary = bill.vote_summary %>
+    <% if summary.values.sum > 0 %>
+      <div class="flex sm:flex-col gap-3 sm:gap-1 sm:text-right flex-shrink-0">
+        <span class="text-xs font-bold text-green-600"><%= summary[:yes] %> Yea</span>
+        <span class="text-xs font-bold text-red-600"><%= summary[:no] %> Nay</span>
+      </div>
+    <% end %>
+  </div>
+<% end %>
