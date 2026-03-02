@@ -3,9 +3,8 @@ module CongressGov
   # Links roll call votes back to bills and Utah representatives.
   #
   # Key API behaviors:
-  # - house_votes list returns "rollCallNumber" (not "rollNumber")
+  # - house_votes list returns rollCallNumber, legislationNumber, legislationType
   # - Member votes are on a SEPARATE endpoint (/house-vote/.../members)
-  # - Bill fields (legislationNumber, legislationType) are top-level, not nested
   # - Vote position field is "voteCast" (not "voteType" or "vote")
   class VoteImporter
     def initialize
@@ -14,79 +13,124 @@ module CongressGov
       @utah_reps = Representative.where(level: :federal).index_by(&:bioguide_id)
     end
 
-    def import(congress: 119, session: 1, limit: 50)
+    def import(congress: 119, session: 1, page_size: 250)
       puts "Importing House votes from Congress.gov (Congress #{congress}, Session #{session})..."
-      import_house_votes(congress, session, limit)
+
+      if @utah_reps.empty?
+        puts "  No federal representatives found. Run import:federal_members first."
+        return
+      end
+
+      import_house_votes(congress, session, page_size)
     end
 
     private
 
-    def import_house_votes(congress, session, limit)
-      votes_data = @client.house_votes(congress: congress, session: session, limit: limit)
-
-      if votes_data.empty?
-        puts "  No House votes returned."
-        return
-      end
-
+    def import_house_votes(congress, session, page_size)
       imported = 0
-      votes_data.each do |vote_data|
-        # API returns "rollCallNumber" per docs
-        roll_number = vote_data["rollCallNumber"] || vote_data["rollNumber"] || vote_data["number"]
-        next unless roll_number
+      skipped_no_bill = 0
+      offset = 0
 
-        begin
-          # Fetch the vote detail (for bill linkage, date, etc.)
-          detail = @client.house_vote(congress, session, roll_number)
-          next unless detail
+      loop do
+        votes_data = @client.house_votes(congress: congress, session: session, limit: page_size, offset: offset)
 
-          # Try to link this vote to a bill
-          bill = find_bill_for_vote(detail)
-          next unless bill
+        if votes_data.empty?
+          puts "  No more roll calls found." if offset == 0
+          break
+        end
 
-          # Fetch individual member votes from the SEPARATE members endpoint
-          member_votes = @client.house_vote_members(congress, session, roll_number)
+        puts "  Fetched #{votes_data.size} roll calls (offset #{offset})..."
 
-          member_votes.each do |mv|
-            process_member_vote(mv, bill, detail)
+        votes_data.each do |vote_data|
+          roll_number = vote_data["rollCallNumber"] || vote_data["rollNumber"]
+          next unless roll_number
+
+          # Try to find or create the bill from the list data
+          bill = find_or_create_bill(vote_data, congress)
+          unless bill
+            skipped_no_bill += 1
+            next
           end
 
-          imported += 1
-        rescue ApiClient::ApiError => e
-          puts "  Error fetching vote #{roll_number}: #{e.message}"
+          begin
+            # Fetch individual member votes from the SEPARATE members endpoint
+            member_votes = @client.house_vote_members(congress, session, roll_number)
+
+            utah_votes = 0
+            member_votes.each do |mv|
+              if process_member_vote(mv, bill, vote_data)
+                utah_votes += 1
+              end
+            end
+
+            imported += 1 if utah_votes > 0
+          rescue ApiClient::ApiError => e
+            puts "  Error fetching members for roll call #{roll_number}: #{e.message}"
+          end
         end
+
+        # Next page, or stop if we got fewer results than requested
+        break if votes_data.size < page_size
+        offset += page_size
       end
 
-      puts "  Done. #{imported} roll calls processed."
+      puts "  Done. #{imported} roll calls with Utah votes processed."
+      puts "  Skipped #{skipped_no_bill} roll calls (no bill linkage)." if skipped_no_bill > 0
     end
 
-    # Attempts to find the bill associated with a roll call vote.
-    # Per API docs, legislationNumber and legislationType are top-level fields
-    # on the vote detail (not nested under "bill").
-    def find_bill_for_vote(vote_detail)
-      legislation_number = vote_detail["legislationNumber"] || vote_detail.dig("bill", "number")
-      legislation_type = vote_detail["legislationType"] || vote_detail.dig("bill", "type")
-      congress = vote_detail["congress"]
-
+    # Finds an existing bill or creates a stub from the vote list data.
+    # The vote list includes legislationNumber, legislationType, and legislationUrl.
+    def find_or_create_bill(vote_data, congress)
+      legislation_number = vote_data["legislationNumber"]
+      legislation_type = vote_data["legislationType"]
       return nil if legislation_number.blank? || legislation_type.blank?
 
       congress_bill_id = "#{congress}-#{legislation_type.downcase}-#{legislation_number}"
-      Bill.find_by(congress_bill_id: congress_bill_id)
+
+      bill = Bill.find_by(congress_bill_id: congress_bill_id)
+      return bill if bill
+
+      # Create a stub bill so we can link the vote
+      bill_number = "#{legislation_type.upcase} #{legislation_number}"
+      chamber = case legislation_type.downcase
+      when "s", "sres", "sjres", "sconres" then "Senate"
+      when "hr", "hres", "hjres", "hconres" then "House"
+      else nil
+      end
+
+      bill = Bill.new(
+        congress_bill_id: congress_bill_id,
+        title: "#{bill_number} (details pending import)",
+        bill_number: bill_number,
+        level: :federal,
+        chamber: chamber,
+        session_year: Date.today.year,
+        session_name: "#{congress}th Congress",
+        data_source: "congress_gov"
+      )
+
+      if bill.save
+        puts "  Created stub bill: #{bill_number}"
+        bill
+      else
+        nil
+      end
     end
 
-    # Records a single member's vote if they're a Utah representative
-    def process_member_vote(member_vote, bill, vote_detail)
+    # Records a single member's vote if they're a Utah representative.
+    # Returns true if a vote was recorded.
+    def process_member_vote(member_vote, bill, vote_data)
       bioguide_id = member_vote["bioguideId"] || member_vote.dig("member", "bioguideId")
-      return unless bioguide_id
+      return false unless bioguide_id
 
       rep = @utah_reps[bioguide_id]
-      return unless rep # Skip non-Utah members
+      return false unless rep # Skip non-Utah members
 
-      # API returns "voteCast" per docs (not "voteType" or "vote")
+      # Try voteCast first, fall back to other field names
       position = normalize_position(member_vote["voteCast"] || member_vote["voteType"] || member_vote["vote"])
-      return unless position
+      return false unless position
 
-      vote_date = parse_date(vote_detail["date"] || vote_detail["actionDate"])
+      vote_date = parse_date(vote_data["startDate"] || vote_data["date"])
 
       vote = Vote.find_or_initialize_by(representative: rep, bill: bill)
       vote.assign_attributes(
@@ -97,6 +141,9 @@ module CongressGov
 
       if vote.save
         puts "    #{rep.last_name} voted #{position} on #{bill.bill_number}"
+        true
+      else
+        false
       end
     end
 
@@ -109,7 +156,6 @@ module CongressGov
       when "Present" then :present
       when "Not Voting" then :not_voting
       else
-        # Fallback: try case-insensitive match
         case vote_type&.downcase&.strip
         when "aye", "yea", "yes" then :yes
         when "nay", "no" then :no

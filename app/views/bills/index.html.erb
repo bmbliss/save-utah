@@ -55,7 +55,7 @@
   <%# === PAGINATION === %>
   <% if @pagy.last > 1 %>
     <div class="mt-8 flex justify-center">
-      <%== pagy(:offset, @pagy).series_nav_js %>
+      <%== pagy_nav_js(@pagy) %>
     </div>
   <% end %>
 </div>

@@ -157,12 +157,12 @@ end
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
-| `utah_members` | `GET /member?stateCode=UT&currentMember=true` | Array of sparse member objects (name, bioguideId, partyName, terms) |
+| `utah_members(limit:)` | `GET /member/UT` | Array of sparse member objects (name, bioguideId, partyName, terms). Current + historical. |
 | `member(bioguide_id)` | `GET /member/{id}` | Full member detail (firstName, lastName, phone, website, etc.) |
 | `bills(congress, limit, offset)` | `GET /bill/{congress}` | Paginated bill list |
 | `bill(congress, type, number)` | `GET /bill/{congress}/{type}/{number}` | Single bill detail |
 | `bill_actions(congress, type, number)` | `GET /bill/{congress}/{type}/{number}/actions` | Bill action history |
-| `house_votes(congress, session, limit)` | `GET /house-vote/{congress}/{session}` | House roll call votes (key: `houseRollCallVotes`) |
+| `house_votes(congress, session, limit, offset)` | `GET /house-vote/{congress}/{session}` | Paginated House roll call votes (key: `houseRollCallVotes`) |
 | `house_vote(congress, session, roll)` | `GET /house-vote/{congress}/{session}/{roll}` | Single vote detail |
 | `house_vote_members(congress, session, roll)` | `GET /house-vote/{congress}/{session}/{roll}/members` | Individual member votes for a roll call |
 
@@ -172,13 +172,13 @@ end
 **Base URL:** `https://glen.le.utah.gov`
 **Docs:** https://le.utah.gov/data/developer.htm
 **Auth:** `UTAH_LEGISLATURE_TOKEN` appended to URL **path** (not query param)
-**Rate Limits:** 1 request/hour (bills), 1 request/day (legislators)
+**Rate Limits:** Unknown (not documented; appears unrestricted in testing)
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
 | `legislators` | `GET /legislators/{token}` | Array of legislator objects |
-| `bills(session:)` | `GET /bills/{session}/billlist/{token}` | Array of bill objects |
-| `bill(session, number)` | `GET /bills/{session}/{number}/{token}` | Single bill with embedded votes |
+| `bills(session:)` | `GET /bills/{session}/billlist/{token}` | Sparse list (number, trackingID, updatetime, lastActionTime only) |
+| `bill(session, number)` | `GET /bills/{session}/{number}/{token}` | Full bill detail (shortTitle, generalProvisions, actionHistoryList, etc.) |
 | `bill_votes(session, number)` | Embedded in bill detail | Vote data (may be empty — use OpenStates as primary) |
 
 ### 4.3 OpenStates::Client
@@ -230,7 +230,7 @@ end
 
 **File:** `app/services/congress_gov/member_importer.rb`
 
-**Two-step fetch:** The list endpoint (`/member?stateCode=UT`) returns sparse data (inverted `name`, `bioguideId`, `partyName`, `terms`). A detail call (`/member/{bioguideId}`) is made for each member to get full fields. Utah only has ~6-8 members so the extra API calls are trivial.
+**Two-step fetch:** The list endpoint (`/member/UT`) returns sparse data (inverted `name`, `bioguideId`, `partyName`, `terms`). Imports all members (current + historical); `active` is set from `detail["currentMember"]`. A detail call (`/member/{bioguideId}`) is made for each member to get full fields.
 
 | API Field (Detail) | Model Field | Transformation |
 |-----------|-------------|----------------|
@@ -257,12 +257,15 @@ end
 
 | API Field | Model Field | Transformation |
 |-----------|-------------|----------------|
-| `id` | `utah_leg_id` | Direct |
-| `firstName`, `lastName` | `first_name`, `last_name` | Direct |
-| `house` | `position_type` | "s"/"senate" → `state_senator`, "h"/"house" → `state_representative` |
+| `id` | `utah_leg_id` | Short code like "PETERT" |
+| `formatName` | `full_name` | Display order ("Thomas W. Peterson") |
+| `fullName` | `first_name`, `last_name` | Parsed from inverted format ("Peterson, Thomas W.") |
+| `house` | `position_type` | "S" → `state_senator`, "H" → `state_representative` |
 | `district` | `district` | Direct |
-| `party` | `party` | Normalized: "r" → "Republican", "d" → "Democrat" |
-| `phone`, `email` | `phone`, `email` | Direct |
+| `party` | `party` | Normalized: "R" → "Republican", "D" → "Democrat" |
+| `cell` / `workPhone` / `homePhone` | `phone` | First available |
+| `email` | `email` | Direct |
+| `image` | `photo_url` | Full URL to headshot |
 | `address` | `office_address` | Direct |
 
 #### OpenStates::PeopleImporter
@@ -295,13 +298,18 @@ end
 
 **File:** `app/services/utah_legislature/bill_importer.rb`
 
-| API Field | Model Field | Transformation |
+**Two-step fetch:** The bill list endpoint returns sparse data (`number`, `trackingID`, `updatetime`, `lastActionTime` only). A detail call is made for each bill to get full fields (`shortTitle`, `generalProvisions`, `lastAction`, `actionHistoryList`, `billVersionList`, etc.).
+
+| API Field (Detail) | Model Field | Transformation |
 |-----------|-------------|----------------|
 | `billNumber` | `bill_number` | Direct |
 | — | `utah_bill_id` | `"#{session}-#{bill_number}"` |
-| `shortTitle` or `generalProvisions` | `title` | Direct |
+| `shortTitle` | `title` | Direct |
+| `generalProvisions` | `summary` | Direct |
 | `billNumber` prefix | `chamber` | HB/HJR/HCR → "House", SB/SJR/SCR → "Senate" |
 | `lastAction` | `status` | Direct |
+| `lastActionDate` | `last_action_on` | Date parse |
+| `billVersionList[].billDocs[].url` | `full_text_url` | Prefers enrolled, then introduced |
 
 **Session name parsing:** "2025GS" → "2025 General Session", "2025S1" → "2025 Special Session"
 
@@ -311,12 +319,12 @@ end
 
 **File:** `app/services/congress_gov/vote_importer.rb`
 
-- Fetches House roll call votes for a given congress/session
+- **Paginates** through all House roll call votes (250 per page via `offset`)
 - List uses `rollCallNumber` field (not `rollNumber`)
 - **Member votes come from a SEPARATE endpoint** (`house_vote_members`), not embedded in vote detail
-- Bill linkage uses top-level `legislationNumber`/`legislationType` (not nested under `"bill"`)
+- Bill linkage uses top-level `legislationNumber`/`legislationType` from the list data
+- **Auto-creates stub bills** when a vote references a bill not yet imported (title: "HR 1234 (details pending import)")
 - Caches Utah reps by `bioguide_id` for fast lookup
-- Links votes to bills by matching `congress_bill_id`
 
 **Position Normalization (field: `voteCast`):**
 | API Value | Model Position |
@@ -413,9 +421,8 @@ rake import:utah_legislature_votes     # backup — if bill detail has votes
 ### 6.3 Import Order Dependency
 
 ```
-Members MUST be imported before Votes
-Bills MUST be imported before Votes
-(Votes link to both by external ID)
+Members MUST be imported before Votes (votes match by bioguide_id / openstates_id)
+Bills SHOULD be imported before Votes (federal vote importer auto-creates stub bills if needed)
 ```
 
 `import:all` enforces this order: members → bills → votes.
@@ -437,7 +444,7 @@ Bills MUST be imported before Votes
 | API | Limit | Notes |
 |-----|-------|-------|
 | Congress.gov | 5,000 req/hr | Generous for batch imports |
-| Utah Legislature | 1 req/hr (bills), 1 req/day (legislators) | Very restrictive — imports may be slow |
+| Utah Legislature | Unknown | Not documented; no throttling observed in testing |
 | OpenStates | Varies by tier | Free tier sufficient for Utah-only data |
 
 ---

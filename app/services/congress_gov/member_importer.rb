@@ -52,8 +52,14 @@ module CongressGov
 
       rep = Representative.find_or_initialize_by(bioguide_id: bioguide_id)
 
-      # Determine position type from terms data (available on both list and detail)
-      terms = detail["terms"]&.dig("item") || list_data["terms"]&.dig("item") || []
+      # Determine position type from terms data (available on both list and detail).
+      # Terms can be an Array directly or a Hash with an "item" key depending on endpoint.
+      raw_terms = detail["terms"] || list_data["terms"]
+      terms = case raw_terms
+      when Array then raw_terms
+      when Hash then raw_terms["item"] || []
+      else []
+      end
       current_term = terms.max_by { |t| t["startYear"].to_i }
       chamber = current_term&.dig("chamber")
 

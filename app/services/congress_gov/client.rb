@@ -7,52 +7,48 @@ module CongressGov
       "https://api.congress.gov/v3"
     end
 
-    # Fetches Utah members of Congress
+    # Fetches Utah members of Congress (current + historical)
+    # State code is a path segment: GET /member/{stateCode}
     # Returns array of member hashes
-    def utah_members
-      results = []
-
-      # Get current members from Utah
-      data = get("/member", { stateCode: "UT", currentMember: true, limit: 20 })
-      results.concat(data.dig("members") || [])
-
-      results
+    def utah_members(limit: 250)
+      data = get("member/UT", { limit: limit })
+      data.dig("members") || []
     end
 
     # Fetches a single member by bioguide ID
     def member(bioguide_id)
-      data = get("/member/#{bioguide_id}")
+      data = get("member/#{bioguide_id}")
       data.dig("member")
     end
 
     # Fetches recent bills (optionally filtered by congress number)
     def bills(congress: 119, limit: 50, offset: 0)
-      data = get("/bill/#{congress}", { limit: limit, offset: offset, sort: "updateDate+desc" })
+      data = get("bill/#{congress}", { limit: limit, offset: offset, sort: "updateDate+desc" })
       data.dig("bills") || []
     end
 
     # Fetches a specific bill
     def bill(congress, bill_type, bill_number)
-      data = get("/bill/#{congress}/#{bill_type}/#{bill_number}")
+      data = get("bill/#{congress}/#{bill_type}/#{bill_number}")
       data.dig("bill")
     end
 
     # Fetches actions/votes for a specific bill
     def bill_actions(congress, bill_type, bill_number)
-      data = get("/bill/#{congress}/#{bill_type}/#{bill_number}/actions")
+      data = get("bill/#{congress}/#{bill_type}/#{bill_number}/actions")
       data.dig("actions") || []
     end
 
-    # Fetches House roll call votes
+    # Fetches House roll call votes (paginated)
     # Response key is "houseRollCallVotes" per API docs
-    def house_votes(congress: 119, session: 1, limit: 50)
-      data = get("/house-vote/#{congress}/#{session}", { limit: limit })
+    def house_votes(congress: 119, session: 1, limit: 250, offset: 0)
+      data = get("house-vote/#{congress}/#{session}", { limit: limit, offset: offset })
       data.dig("houseRollCallVotes") || []
     end
 
     # Fetches a specific House roll call vote detail
     def house_vote(congress, session, roll_number)
-      data = get("/house-vote/#{congress}/#{session}/#{roll_number}")
+      data = get("house-vote/#{congress}/#{session}/#{roll_number}")
       data.dig("vote")
     end
 
@@ -60,7 +56,7 @@ module CongressGov
     # Member votes are a SEPARATE endpoint from the vote detail
     # GET /house-vote/{congress}/{session}/{rollCallNumber}/members
     def house_vote_members(congress, session, roll_number)
-      data = get("/house-vote/#{congress}/#{session}/#{roll_number}/members")
+      data = get("house-vote/#{congress}/#{session}/#{roll_number}/members")
       data.dig("members") || []
     end
 

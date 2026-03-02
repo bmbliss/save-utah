@@ -1,7 +1,6 @@
 module UtahLegislature
   # HTTP client for the Utah Legislature API (glen.le.utah.gov)
   # Docs: https://le.utah.gov/data/developer.htm
-  # Rate limits: 1 request/hour for bills, 1 request/day for legislators
   # Authentication: developer token appended to URL path (NOT query param)
   class Client < ApiClient
     def base_url
