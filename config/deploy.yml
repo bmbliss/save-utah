@@ -1,120 +1,67 @@
-# Name of your application. Used to uniquely configure containers.
+# Name of your application
 service: save_utah
 
-# Name of the container image (use your-user/app-name on external registries).
-image: save_utah
+# Container image name — your GitHub username + app name
+image: bmbliss/save_utah
 
-# Deploy to these servers.
+# Deploy to these servers
 servers:
   web:
-    - 192.168.0.1
-  # job:
-  #   hosts:
-  #     - 192.168.0.1
-  #   cmd: bin/jobs
+    - 64.23.243.123
 
-# Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
-# If used with Cloudflare, set encryption mode in SSL/TLS setting to "Full" to enable CF-to-app encryption.
-#
-# Using an SSL proxy like this requires turning on config.assume_ssl and config.force_ssl in production.rb!
-#
-# Don't use this when deploying to multiple web servers (then you have to terminate SSL at your load balancer).
-#
-# proxy:
-#   ssl: true
-#   host: app.example.com
+# Enable SSL via Let's Encrypt — Kamal proxy handles it automatically
+# Requires DNS to be pointed at the Droplet IP first (Step 1)
+proxy:
+  ssl: true
+  host: gosaveutah.org
 
-# Where you keep your container images.
+# GitHub Container Registry
 registry:
-  # Alternatives: hub.docker.com / registry.digitalocean.com / ghcr.io / ...
-  server: localhost:5555
+  server: ghcr.io
+  username: bmbliss
+  password:
+    - KAMAL_REGISTRY_PASSWORD        # <-- this is a NAME, not a value
+                                     #     the actual token lives in .kamal/secrets
 
-  # Needed for authenticated registries.
-  # username: your-user
-
-  # Always use an access token rather than real password when possible.
-  # password:
-  #   - KAMAL_REGISTRY_PASSWORD
-
-# Inject ENV variables into containers (secrets come from .kamal/secrets).
+# Environment variables injected into the app container
 env:
-  secret:
-    - RAILS_MASTER_KEY
-  clear:
-    # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
-    # When you start using multiple servers, you should split out job processing to a dedicated machine.
+  secret:                            # <-- these are NAMES that Kamal looks up
+    - RAILS_MASTER_KEY               #     in .kamal/secrets at deploy time
+    - SAVE_UTAH_DATABASE_PASSWORD
+  clear:                             # <-- these are plain values, not secrets
     SOLID_QUEUE_IN_PUMA: true
+    DB_HOST: save_utah-db
 
-    # Set number of processes dedicated to Solid Queue (default: 1)
-    # JOB_CONCURRENCY: 3
+# Persistent storage
+volumes:
+  - "save_utah_storage:/rails/storage"
 
-    # Set number of cores available to the application on each server (default: 1).
-    # WEB_CONCURRENCY: 2
+# Asset bridging between deploys
+asset_path: /rails/public/assets
 
-    # Match this to any external database server to configure Active Record correctly
-    # Use save_utah-db for a db accessory server on same machine via local kamal docker network.
-    # DB_HOST: 192.168.0.2
+# PostgreSQL as a Kamal accessory (runs on the same Droplet)
+accessories:
+  db:
+    image: postgres:17
+    host: 64.23.243.123
+    port: "127.0.0.1:5432:5432"
+    env:
+      clear:
+        POSTGRES_DB: save_utah_production
+        POSTGRES_USER: save_utah
+      secret:
+        - SAVE_UTAH_DATABASE_PASSWORD  # <-- same NAME, looked up from .kamal/secrets
 
-    # Log everything from Rails
-    # RAILS_LOG_LEVEL: debug
+    directories:
+      - data:/var/lib/postgresql/data
 
-# Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
-# "bin/kamal logs -r job" will tail logs from the first server in the job section.
+# Build for AMD64 (Digital Ocean Droplets)
+builder:
+  arch: amd64
+
+# Useful aliases
 aliases:
   console: app exec --interactive --reuse "bin/rails console"
   shell: app exec --interactive --reuse "bash"
   logs: app logs -f
   dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
-
-# Use a persistent storage volume for sqlite database files and local Active Storage files.
-# Recommended to change this to a mounted volume path that is backed up off server.
-volumes:
-  - "save_utah_storage:/rails/storage"
-
-# Bridge fingerprinted assets, like JS and CSS, between versions to avoid
-# hitting 404 on in-flight requests. Combines all files from new and old
-# version inside the asset_path.
-asset_path: /rails/public/assets
-
-
-# Configure the image builder.
-builder:
-  arch: amd64
-
-  # # Build image via remote server (useful for faster amd64 builds on arm64 computers)
-  # remote: ssh://docker@docker-builder-server
-  #
-  # # Pass arguments and secrets to the Docker build process
-  # args:
-  #   RUBY_VERSION: ruby-4.0.1
-  # secrets:
-  #   - GITHUB_TOKEN
-  #   - RAILS_MASTER_KEY
-
-# Use a different ssh user than root
-# ssh:
-#   user: app
-
-# Use accessory services (secrets come from .kamal/secrets).
-# accessories:
-#   db:
-#     image: mysql:8.0
-#     host: 192.168.0.2
-#     # Change to 3306 to expose port to the world instead of just local network.
-#     port: "127.0.0.1:3306:3306"
-#     env:
-#       clear:
-#         MYSQL_ROOT_HOST: '%'
-#       secret:
-#         - MYSQL_ROOT_PASSWORD
-#     files:
-#       - config/mysql/production.cnf:/etc/mysql/my.cnf
-#       - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
-#     directories:
-#       - data:/var/lib/mysql
-#   redis:
-#     image: valkey/valkey:8
-#     host: 192.168.0.2
-#     port: 6379
-#     directories:
-#       - data:/data

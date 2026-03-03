@@ -29,3 +29,9 @@ Design documentation for the Save Utah civic engagement platform — tracking Ut
 | Spec | Code | Purpose |
 |------|------|---------|
 | [frontend-system.md](./frontend-system.md) | [app/views/](../app/views/), [app/assets/tailwind/](../app/assets/tailwind/), [app/javascript/](../app/javascript/) | Tailwind theme, layout, partials, Stimulus, SEO |
+
+## Deployment
+
+| Spec | Code | Purpose |
+|------|------|---------|
+| [deployment.md](./deployment.md) | [config/deploy.yml](../config/deploy.yml), [Dockerfile](../Dockerfile), [.kamal/](../.kamal/) | Step-by-step Kamal 2 + Digital Ocean deployment guide |

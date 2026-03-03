@@ -88,6 +88,7 @@ production:
   primary: &primary_production
     <<: *default
     database: save_utah_production
+    host: <%= ENV.fetch("DB_HOST", "localhost") %>
     username: save_utah
     password: <%= ENV["SAVE_UTAH_DATABASE_PASSWORD"] %>
   cache:
