@@ -1,0 +1,74 @@
+<%# Script Tabs — Call / Text / Email with copy buttons
+     Locals: call_script, text_script, email_script %>
+
+<div data-controller="script-tabs">
+  <%# Tab buttons %>
+  <div class="flex rounded-t-xl overflow-hidden bg-gray-200">
+    <button data-action="click->script-tabs#switch" data-index="0"
+            data-script-tabs-target="tab"
+            class="flex-1 px-4 py-3 text-sm font-bold uppercase tracking-wider bg-white text-utah-navy transition-colors">
+      Call Script
+    </button>
+    <button data-action="click->script-tabs#switch" data-index="1"
+            data-script-tabs-target="tab"
+            class="flex-1 px-4 py-3 text-sm font-bold uppercase tracking-wider text-gray-400 transition-colors">
+      Text Script
+    </button>
+    <button data-action="click->script-tabs#switch" data-index="2"
+            data-script-tabs-target="tab"
+            class="flex-1 px-4 py-3 text-sm font-bold uppercase tracking-wider text-gray-400 transition-colors">
+      Email Script
+    </button>
+  </div>
+
+  <%# Call script panel %>
+  <div data-script-tabs-target="panel"
+       class="bg-white rounded-b-xl border border-t-0 border-gray-200 p-5"
+       data-controller="clipboard">
+    <% if call_script %>
+      <div data-clipboard-target="source" class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+        <%= call_script.script_template %>
+      </div>
+      <button data-action="click->clipboard#copy" data-clipboard-target="button"
+              class="mt-4 w-full py-2.5 rounded-lg bg-utah-navy text-white text-sm font-bold hover:bg-utah-navy-dark transition-colors">
+        Copy Call Script
+      </button>
+    <% else %>
+      <p class="text-sm text-gray-400 italic">No call script available.</p>
+    <% end %>
+  </div>
+
+  <%# Text script panel %>
+  <div data-script-tabs-target="panel"
+       class="hidden bg-white rounded-b-xl border border-t-0 border-gray-200 p-5"
+       data-controller="clipboard">
+    <% if text_script %>
+      <div data-clipboard-target="source" class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+        <%= text_script.script_template %>
+      </div>
+      <button data-action="click->clipboard#copy" data-clipboard-target="button"
+              class="mt-4 w-full py-2.5 rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 transition-colors">
+        Copy Text Script
+      </button>
+    <% else %>
+      <p class="text-sm text-gray-400 italic">No text script available.</p>
+    <% end %>
+  </div>
+
+  <%# Email script panel %>
+  <div data-script-tabs-target="panel"
+       class="hidden bg-white rounded-b-xl border border-t-0 border-gray-200 p-5"
+       data-controller="clipboard">
+    <% if email_script %>
+      <div data-clipboard-target="source" class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+        <%= email_script.script_template %>
+      </div>
+      <button data-action="click->clipboard#copy" data-clipboard-target="button"
+              class="mt-4 w-full py-2.5 rounded-lg bg-sky-600 text-white text-sm font-bold hover:bg-sky-700 transition-colors">
+        Copy Email Script
+      </button>
+    <% else %>
+      <p class="text-sm text-gray-400 italic">No email script available.</p>
+    <% end %>
+  </div>
+</div>

@@ -14,7 +14,17 @@ class IssuesController < ApplicationController
 
     set_meta_tags(
       title: "#{@issue.name} — Accountability Scorecard",
-      description: @issue.description&.truncate(160)
+      description: @issue.description&.truncate(160),
+      og: {
+        title: @issue.name,
+        description: @issue.description&.truncate(160),
+        type: "website"
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: @issue.name,
+        description: @issue.description&.truncate(160)
+      }
     )
 
     # Build votes lookup hash: { [rep_id, bill_id] => vote } — one query, O(1) lookups in view
@@ -38,7 +48,12 @@ class IssuesController < ApplicationController
       score.nil? ? 999 : score
     end
 
-    # Related action scripts
+    # Related action scripts (generic list)
     @action_scripts = ActionScript.active.ordered.where(bill_id: bill_ids).includes(:representative, :bill).limit(4)
+
+    # Typed scripts for blast cards and script tabs
+    @call_script = ActionScript.active.calls.where(bill_id: bill_ids).first
+    @text_script = ActionScript.active.texts.where(bill_id: bill_ids).first
+    @email_script = ActionScript.active.emails.where(bill_id: bill_ids).first
   end
 end

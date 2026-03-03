@@ -42,6 +42,38 @@
   </div>
 </section>
 
+<%# ===== SCRIPT TABS ===== %>
+<% if @call_script || @text_script || @email_script %>
+  <section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+    <%= render "shared/script_tabs",
+      call_script: @call_script,
+      text_script: @text_script,
+      email_script: @email_script %>
+  </section>
+<% end %>
+
+<%# ===== BLAST REP CARDS ===== %>
+<% if @representatives.any? && (@call_script || @text_script || @email_script) %>
+  <section class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="text-center mb-6">
+      <h2 class="text-2xl font-extrabold text-utah-navy">Take Action Now</h2>
+      <p class="mt-1 text-gray-600 text-sm">Tap CALL, TEXT, or EMAIL — it takes 30 seconds</p>
+    </div>
+
+    <div class="space-y-3">
+      <% @representatives.each do |rep| %>
+        <%= render "shared/blast_rep_card",
+          representative: rep,
+          issue: @issue,
+          score: @scores[rep.id],
+          call_script: @call_script,
+          text_script: @text_script,
+          email_script: @email_script %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
 <%# ===== RELATED BILLS ===== %>
 <% if @issue_bills.any? %>
   <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

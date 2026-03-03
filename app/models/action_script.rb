@@ -1,6 +1,6 @@
 class ActionScript < ApplicationRecord
   # --- Enums ---
-  enum :action_type, { call: 0, email: 1 }
+  enum :action_type, { call: 0, email: 1, text: 2 }
 
   # --- Associations ---
   belongs_to :representative, optional: true
@@ -16,6 +16,7 @@ class ActionScript < ApplicationRecord
   scope :featured, -> { where(featured: true) }
   scope :calls, -> { where(action_type: :call) }
   scope :emails, -> { where(action_type: :email) }
+  scope :texts, -> { where(action_type: :text) }
   scope :ordered, -> { order(:sort_order, :title) }
 
   # Renders the script template with actual representative data

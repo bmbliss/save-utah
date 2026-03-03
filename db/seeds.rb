@@ -444,6 +444,144 @@ if insider_issue && efficiency_bill
   puts "  Linked #{efficiency_bill.bill_number} to #{insider_issue.name}"
 end
 
+# ============================================================
+# 19 STATE SENATORS — "Stop Taxpayer Benefits" Blast
+# ============================================================
+puts "\nSeeding 19 state senators for the blast..."
+
+state_senators = [
+  { first_name: "Kirk", last_name: "Cullimore", district: "9", phone_work: "(801) 560-0769", email: "kcullimore@le.utah.gov" },
+  { first_name: "Gene", last_name: "Davis", district: "3", phone_work: "(801) 484-6605", email: "gdavis@le.utah.gov" },
+  { first_name: "Luz", last_name: "Escamilla", district: "1", phone_work: "(801) 544-8913", email: "lescamilla@le.utah.gov" },
+  { first_name: "Lincoln", last_name: "Fillmore", district: "10", phone_work: "(801) 694-6800", email: "lfillmore@le.utah.gov" },
+  { first_name: "Keith", last_name: "Grover", district: "15", phone_work: "(801) 420-1509", email: "kgrover@le.utah.gov" },
+  { first_name: "Daniel", last_name: "Hemmert", district: "14", phone_work: "(801) 376-7792", email: "dhemmert@le.utah.gov" },
+  { first_name: "David", last_name: "Hinkins", district: "27", phone_work: "(435) 650-0172", email: "dhinkins@le.utah.gov" },
+  { first_name: "Ann", last_name: "Millner", district: "18", phone_work: "(801) 721-8404", email: "amillner@le.utah.gov" },
+  { first_name: "Mike", last_name: "McKell", district: "11", phone_work: "(801) 427-5625", email: "mmckell@le.utah.gov" },
+  { first_name: "Todd", last_name: "Weiler", district: "23", phone_work: "(801) 564-8575", email: "tweiler@le.utah.gov" },
+  { first_name: "Evan", last_name: "Vickers", district: "28", phone_work: "(435) 586-2927", email: "evickers@le.utah.gov" },
+  { first_name: "Curt", last_name: "Bramble", district: "16", phone_work: "(801) 805-5025", email: "cbramble@le.utah.gov" },
+  { first_name: "Wayne", last_name: "Harper", district: "6", phone_work: "(801) 891-4740", email: "wharper@le.utah.gov" },
+  { first_name: "Don", last_name: "Ipson", district: "29", phone_work: "(435) 634-1609", email: "dipson@le.utah.gov" },
+  { first_name: "Derrin", last_name: "Owens", district: "24", phone_work: "(435) 820-2542", email: "dowens@le.utah.gov" },
+  { first_name: "Scott", last_name: "Sandall", district: "17", phone_work: "(435) 225-2698", email: "ssandall@le.utah.gov" },
+  { first_name: "Jerry", last_name: "Stevenson", district: "22", phone_work: "(801) 643-4440", email: "jstevenson@le.utah.gov" },
+  { first_name: "Ronald", last_name: "Winterton", district: "26", phone_work: "(435) 613-2036", email: "rwinterton@le.utah.gov" },
+  { first_name: "Michael", last_name: "Kennedy", district: "13", phone_work: "(801) 919-2309", email: "mkennedy@le.utah.gov" }
+]
+
+state_senators.each do |attrs|
+  rep = Representative.find_or_initialize_by(
+    first_name: attrs[:first_name],
+    last_name: attrs[:last_name],
+    position_type: :state_senator
+  )
+  rep.assign_attributes(
+    full_name: "#{attrs[:first_name]} #{attrs[:last_name]}",
+    title: "State Senator",
+    position_type: :state_senator,
+    level: :state,
+    chamber: "Senate",
+    party: "Republican",
+    district: attrs[:district],
+    phone_work: attrs[:phone_work],
+    email: attrs[:email],
+    active: true
+  )
+  rep.save!
+  puts "  Sen. #{rep.full_name} (R) — District #{rep.district}"
+end
+
+# Create the state bill these senators voted NO on
+puts "\nSeeding HB 497 (Stop Taxpayer Benefits bill)..."
+
+hb497 = Bill.find_or_initialize_by(bill_number: "HB 497", session_year: 2025)
+hb497.assign_attributes(
+  title: "Taxpayer Protection — Prohibiting Public Benefits for Unauthorized Immigrants",
+  summary: "Prohibits state-funded benefits including in-state tuition, driver privilege cards, and non-emergency Medicaid for individuals not lawfully present in Utah.",
+  editorial_summary: "This bill would have ended taxpayer-funded benefits for illegal immigrants in Utah — in-state tuition subsidies, driver privilege cards, and non-emergency Medicaid. 19 Republican senators voted NO, siding with illegal immigrants over Utah taxpayers. They killed it.",
+  status: "Failed in Senate",
+  level: :state,
+  chamber: "Senate",
+  session_year: 2025,
+  session_name: "2025 General Session",
+  featured: true,
+  introduced_on: Date.new(2025, 1, 28),
+  last_action_on: Date.new(2025, 3, 7),
+  data_source: "seed"
+)
+hb497.save!
+puts "  #{hb497.bill_number}: #{hb497.title}"
+
+# Create NO votes for each of the 19 senators
+puts "\nSeeding NO votes..."
+
+state_senators.each do |attrs|
+  rep = Representative.find_by(first_name: attrs[:first_name], last_name: attrs[:last_name], position_type: :state_senator)
+  next unless rep
+
+  vote = Vote.find_or_initialize_by(representative: rep, bill: hb497)
+  vote.assign_attributes(position: :no, voted_on: Date.new(2025, 3, 7), data_source: "seed")
+  vote.save!
+  puts "  #{rep.full_name} voted NO on #{hb497.bill_number}"
+end
+
+# Link HB 497 to the "Stop Taxpayer Benefits" issue
+puts "\nLinking HB 497 to the taxpayer issue..."
+
+taxpayer_issue = Issue.find_by(name: "Stop Taxpayer Benefits to Illegal Immigrants")
+if taxpayer_issue && hb497
+  ib = IssueBill.find_or_initialize_by(issue: taxpayer_issue, bill: hb497)
+  ib.assign_attributes(popular_position: :yes, sort_order: 0)
+  ib.save!
+  puts "  Linked #{hb497.bill_number} to #{taxpayer_issue.name}"
+
+  # Mark this issue as HOT
+  taxpayer_issue.update!(hot: true)
+  puts "  Marked '#{taxpayer_issue.name}' as HOT"
+end
+
+# Create 3 action scripts (call, text, email) for HB 497
+puts "\nSeeding blast action scripts..."
+
+blast_scripts = [
+  {
+    title: "Call Script — HB 497 Taxpayer Benefits",
+    script_template: "Hi, my name is [YOUR NAME] and I'm a constituent in your district. I'm calling about HB 497, the bill to stop taxpayer-funded benefits for illegal immigrants. You voted NO on this bill and I want to know why. Utah families are struggling with the cost of living while our tax dollars subsidize in-state tuition and driver privilege cards for people who broke the law to get here. I expect you to represent the people who elected you, not illegal immigrants. I'll be watching your vote next session. Thank you.",
+    context: "19 Republican state senators killed HB 497, which would have ended taxpayer-funded benefits for unauthorized immigrants in Utah.",
+    action_type: :call,
+    bill: hb497,
+    featured: true,
+    sort_order: 0
+  },
+  {
+    title: "Text Script — HB 497 Taxpayer Benefits",
+    script_template: "Sen. [REP_NAME]: You voted NO on HB 497 to stop taxpayer benefits for illegal immigrants. Utah families pay the price. We're watching. — A constituent",
+    context: "Short SMS for texting your state senator about HB 497.",
+    action_type: :text,
+    bill: hb497,
+    featured: true,
+    sort_order: 1
+  },
+  {
+    title: "Email Script — HB 497 Taxpayer Benefits",
+    script_template: "Subject: Your NO vote on HB 497 — Taxpayer Benefits for Illegal Immigrants\n\nSenator [REP_NAME],\n\nI am a Utah resident and your constituent. I am deeply disappointed by your NO vote on HB 497, which would have prohibited taxpayer-funded benefits — including in-state tuition, driver privilege cards, and non-emergency Medicaid — for individuals not lawfully present in our state.\n\nUtah families are paying the bill for benefits that go to people who broke the law to get here. 45% of DUI arrests in some counties involve unlicensed drivers. 40% of hit-and-runs involve uninsured motorists with privilege cards. You voted to keep funding this.\n\nI expect you to stand with the taxpayers who elected you. I will remember this vote.\n\nSincerely,\n[YOUR NAME]",
+    context: "Email template for contacting your state senator about HB 497.",
+    action_type: :email,
+    bill: hb497,
+    featured: true,
+    sort_order: 2
+  }
+]
+
+blast_scripts.each do |attrs|
+  script = ActionScript.find_or_initialize_by(title: attrs[:title])
+  script.assign_attributes(attrs.merge(active: true))
+  script.save!
+  puts "  #{script.action_type}: #{script.title}"
+end
+
 puts "\nSeeding complete!"
 puts "  Representatives: #{Representative.count}"
 puts "  Bills: #{Bill.count}"

@@ -13,6 +13,7 @@ class Issue < ApplicationRecord
 
   # --- Scopes ---
   scope :active, -> { where(active: true) }
+  scope :hot, -> { where(hot: true) }
   scope :ordered, -> { order(:sort_order, :name) }
 
   # Computes accountability score for a representative across all bills in this issue.
