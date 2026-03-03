@@ -125,7 +125,7 @@ registry:
 env:
   secret:                            # <-- these are NAMES that Kamal looks up
     - RAILS_MASTER_KEY               #     in .kamal/secrets at deploy time
-    - SAVE_UTAH_DATABASE_PASSWORD
+    - POSTGRES_PASSWORD
   clear:                             # <-- these are plain values, not secrets
     SOLID_QUEUE_IN_PUMA: true
     DB_HOST: save_utah-db
@@ -148,7 +148,7 @@ accessories:
         POSTGRES_DB: save_utah_production
         POSTGRES_USER: save_utah
       secret:
-        - SAVE_UTAH_DATABASE_PASSWORD  # <-- same NAME, looked up from .kamal/secrets
+        - POSTGRES_PASSWORD  # <-- same NAME, looked up from .kamal/secrets
 
     directories:
       - data:/var/lib/postgresql/data
@@ -188,7 +188,7 @@ Create/edit `.kamal/secrets` with these contents:
 ```
 KAMAL_REGISTRY_PASSWORD=ghp_YOUR_GITHUB_TOKEN_HERE
 RAILS_MASTER_KEY=YOUR_MASTER_KEY_HERE
-SAVE_UTAH_DATABASE_PASSWORD=THE_PASSWORD_YOU_JUST_GENERATED
+POSTGRES_PASSWORD=THE_PASSWORD_YOU_JUST_GENERATED
 ```
 
 **Replace the values (right side of `=` only):**
@@ -202,7 +202,7 @@ SAVE_UTAH_DATABASE_PASSWORD=THE_PASSWORD_YOU_JUST_GENERATED
 
 ## Step 6: Update `config/database.yml` (Production)
 
-The production database config needs to connect to the Postgres container via `DB_HOST`. The current config uses `SAVE_UTAH_DATABASE_PASSWORD` which is already set. Just make sure the production section uses the `DB_HOST` env var:
+The production database config needs to connect to the Postgres container via `DB_HOST`. The current config uses `POSTGRES_PASSWORD` which is already set. Just make sure the production section uses the `DB_HOST` env var:
 
 The existing `database.yml` production section should work as-is because Rails auto-merges `DATABASE_URL` when present. But since we're using explicit config, verify the production block includes a host line:
 
@@ -213,7 +213,7 @@ production:
     database: save_utah_production
     host: <%= ENV.fetch("DB_HOST", "localhost") %>
     username: save_utah
-    password: <%= ENV["SAVE_UTAH_DATABASE_PASSWORD"] %>
+    password: <%= ENV["POSTGRES_PASSWORD"] %>
   cache:
     <<: *primary_production
     database: save_utah_production_cache

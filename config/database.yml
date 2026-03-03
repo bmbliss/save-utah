@@ -90,7 +90,7 @@ production:
     database: save_utah_production
     host: <%= ENV.fetch("DB_HOST", "localhost") %>
     username: save_utah
-    password: <%= ENV["SAVE_UTAH_DATABASE_PASSWORD"] %>
+    password: <%= ENV["POSTGRES_PASSWORD"] %>
   cache:
     <<: *primary_production
     database: save_utah_production_cache

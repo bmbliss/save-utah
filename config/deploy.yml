@@ -27,7 +27,7 @@ registry:
 env:
   secret:                            # <-- these are NAMES that Kamal looks up
     - RAILS_MASTER_KEY               #     in .kamal/secrets at deploy time
-    - SAVE_UTAH_DATABASE_PASSWORD
+    - POSTGRES_PASSWORD
     - CONGRESS_GOV_API_KEY
     - UTAH_LEGISLATURE_TOKEN
     - OPENSTATES_API_KEY
