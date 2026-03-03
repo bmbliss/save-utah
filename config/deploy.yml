@@ -28,6 +28,9 @@ env:
   secret:                            # <-- these are NAMES that Kamal looks up
     - RAILS_MASTER_KEY               #     in .kamal/secrets at deploy time
     - SAVE_UTAH_DATABASE_PASSWORD
+    - CONGRESS_GOV_API_KEY
+    - UTAH_LEGISLATURE_TOKEN
+    - OPENSTATES_API_KEY
   clear:                             # <-- these are plain values, not secrets
     SOLID_QUEUE_IN_PUMA: true
     DB_HOST: save_utah-db
@@ -50,7 +53,7 @@ accessories:
         POSTGRES_DB: save_utah_production
         POSTGRES_USER: save_utah
       secret:
-        - SAVE_UTAH_DATABASE_PASSWORD  # <-- same NAME, looked up from .kamal/secrets
+        - POSTGRES_PASSWORD            # <-- Postgres requires this exact name
 
     directories:
       - data:/var/lib/postgresql/data
