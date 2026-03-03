@@ -125,6 +125,7 @@ module OpenStates
         return bill if bill
       end
 
+      puts "  WARNING: Could not match bill — openstates_id=#{openstates_bill_id}, identifier=#{identifier}"
       nil
     end
 
@@ -160,7 +161,10 @@ module OpenStates
       # Map vote option to our position enum
       option = individual_vote["option"] || individual_vote["vote"]
       position = normalize_position(option)
-      return false unless position
+      unless position
+        puts "  WARNING: Unknown vote option '#{option}' for #{rep.last_name} on #{bill.bill_number}"
+        return false
+      end
 
       vote = Vote.find_or_initialize_by(representative: rep, bill: bill)
       vote.assign_attributes(
@@ -203,6 +207,7 @@ module OpenStates
         return match if match
       end
 
+      puts "  WARNING: Could not match representative — voter_id=#{voter_id}, voter_name=#{voter_name}"
       nil
     end
 

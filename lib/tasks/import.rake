@@ -34,6 +34,11 @@ namespace :import do
     CongressGov::VoteImporter.new.import
   end
 
+  desc "Import federal Senate votes from senate.gov XML"
+  task federal_senate_votes: :environment do
+    SenateGov::VoteImporter.new.import
+  end
+
   desc "Import state floor votes from OpenStates API (primary source for state votes)"
   task state_votes: :environment do
     OpenStates::VoteImporter.new.import
@@ -49,10 +54,66 @@ namespace :import do
     UtahLegislature::VoteImporter.new.import
   end
 
-  desc "Import all members (federal + state)"
+  desc "Backfill federal bill stubs created by vote importer with full details"
+  task backfill_federal_stubs: :environment do
+    client = CongressGov::Client.new
+    stubs = Bill.where(level: :federal).where("title LIKE ?", "%(details pending import)%")
+
+    if stubs.empty?
+      puts "No federal bill stubs to backfill."
+      next
+    end
+
+    puts "Backfilling #{stubs.count} federal bill stubs..."
+    updated = 0
+
+    stubs.find_each do |bill|
+      # Parse congress_bill_id: "119-hr-1234" → congress=119, type=hr, number=1234
+      parts = bill.congress_bill_id&.split("-")
+      unless parts&.length == 3
+        puts "  SKIP: Cannot parse congress_bill_id '#{bill.congress_bill_id}' for #{bill.bill_number}"
+        next
+      end
+
+      congress, bill_type, number = parts
+      sleep(0.5) # Courtesy delay between API calls
+
+      begin
+        data = client.bill(congress, bill_type, number)
+        unless data
+          puts "  SKIP: No data returned for #{bill.bill_number}"
+          next
+        end
+
+        bill.assign_attributes(
+          title: data["title"] || bill.title,
+          summary: data.dig("summaries", "billSummaries", 0, "text") || data["latestAction"]&.dig("text") || bill.summary,
+          status: data.dig("latestAction", "text")&.truncate(100) || bill.status,
+          introduced_on: data["introducedDate"] ? Date.parse(data["introducedDate"]) : bill.introduced_on,
+          last_action_on: data.dig("latestAction", "actionDate") ? Date.parse(data.dig("latestAction", "actionDate")) : bill.last_action_on
+        )
+
+        if bill.save
+          puts "  UPDATED: #{bill.bill_number} — #{bill.title.truncate(60)}"
+          updated += 1
+        else
+          puts "  FAILED: #{bill.bill_number} — #{bill.errors.full_messages.join(', ')}"
+        end
+      rescue ApiClient::ApiError => e
+        puts "  ERROR: #{bill.bill_number} — #{e.message}"
+      rescue Date::Error => e
+        puts "  ERROR: #{bill.bill_number} — bad date: #{e.message}"
+      end
+    end
+
+    puts "Backfill complete. #{updated}/#{stubs.count} stubs updated."
+  end
+
+  desc "Import all members (federal + state + OpenStates IDs)"
   task all_members: :environment do
     Rake::Task["import:federal_members"].invoke
     Rake::Task["import:state_legislators"].invoke
+    Rake::Task["import:openstates_people"].invoke
   end
 
   desc "Import all bills (federal + state)"
@@ -61,9 +122,10 @@ namespace :import do
     Rake::Task["import:state_bills"].invoke
   end
 
-  desc "Import all votes (federal + state)"
+  desc "Import all votes (federal House + Senate + state)"
   task all_votes: :environment do
     Rake::Task["import:federal_votes"].invoke
+    Rake::Task["import:federal_senate_votes"].invoke
     Rake::Task["import:state_votes"].invoke
   end
 
@@ -79,6 +141,8 @@ namespace :import do
     Rake::Task["import:all_bills"].invoke
     puts
     Rake::Task["import:all_votes"].invoke
+    puts
+    Rake::Task["import:backfill_federal_stubs"].invoke
 
     puts
     puts "=" * 60

@@ -380,6 +380,13 @@ issues_data = [
     stance_label: "Protect Taxpayers",
     against_label: "Funded Illegal Benefits",
     description: "Utah taxpayers are footing the bill for benefits that go to people who broke the law to get here. Emergency Medicaid, in-state tuition, driver privilege cards — every dollar spent on illegal immigrants is a dollar stolen from Utah families who play by the rules. Our representatives need to choose: do they stand with the citizens who elected them, or do they keep writing blank checks to people who cut the line?",
+    hero_headline: '19 Utah Senators Voted <span class="block text-utah-red">Against You</span>',
+    hero_subheadline: 'They killed <strong class="text-white">HB 497</strong> — the bill to stop taxpayer-funded benefits for illegal immigrants. In-state tuition. Driver privilege cards. Non-emergency Medicaid. <strong class="text-utah-gold">Your tax dollars. Their choice.</strong>',
+    hero_cta: "Here are their names and phone numbers. Let them know how you feel.",
+    hero_stat_1: "45% of DUIs — unlicensed drivers",
+    hero_stat_2: "40% of hit-and-runs — uninsured",
+    og_title: "19 Utah Senators Voted to Keep Funding Illegal Immigrants With YOUR Tax Dollars",
+    og_description: "They killed HB 497. Every one of them. Call them. Text them. Let them know you're watching.",
     sort_order: 0
   },
   {

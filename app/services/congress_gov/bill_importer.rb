@@ -6,7 +6,7 @@ module CongressGov
       @client = Client.new
     end
 
-    def import(congress: 119, limit: 50)
+    def import(congress: 119, limit: 250)
       puts "Importing federal bills from Congress.gov (Congress #{congress})..."
       bills_data = @client.bills(congress: congress, limit: limit)
 

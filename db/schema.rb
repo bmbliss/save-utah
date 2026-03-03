@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_165905) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_03_173059) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -90,9 +90,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_165905) do
     t.string "against_label"
     t.datetime "created_at", null: false
     t.text "description"
+    t.string "hero_cta"
+    t.string "hero_headline"
+    t.string "hero_stat_1"
+    t.string "hero_stat_2"
+    t.text "hero_subheadline"
     t.boolean "hot", default: false, null: false
     t.string "icon"
     t.string "name", null: false
+    t.text "og_description"
+    t.string "og_title"
     t.string "slug"
     t.integer "sort_order", default: 0, null: false
     t.string "stance_label"

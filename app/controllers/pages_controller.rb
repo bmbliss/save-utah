@@ -34,19 +34,22 @@ class PagesController < ApplicationController
     # Other issues for below-the-fold section
     @other_issues = Issue.active.ordered.where.not(id: @hot_issue&.id).limit(4)
 
-    # Aggressive OG meta tags for social sharing
+    # Dynamic OG meta tags from the hot issue (falls back to name/description)
+    og_title = @hot_issue&.og_title.presence || @hot_issue&.name || "Save Utah"
+    og_desc = @hot_issue&.og_description.presence || @hot_issue&.description&.truncate(200) || "Hold your representatives accountable."
+
     set_meta_tags(
-      title: "19 Utah Senators Voted to Keep Funding Illegal Immigrants With YOUR Tax Dollars",
-      description: "They killed HB 497. Every one of them. Call them. Text them. Let them know you're watching.",
+      title: og_title,
+      description: og_desc,
       og: {
-        title: "19 Utah Senators Voted to Keep Funding Illegal Immigrants",
-        description: "They killed HB 497. Here are their names and phone numbers. Call them.",
+        title: og_title,
+        description: og_desc,
         type: "website"
       },
       twitter: {
         card: "summary_large_image",
-        title: "19 Utah Senators Voted to Keep Funding Illegal Immigrants",
-        description: "They killed HB 497. Here are their names and phone numbers."
+        title: og_title,
+        description: og_desc
       }
     )
   end
