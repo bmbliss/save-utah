@@ -90,6 +90,22 @@
 
 <% end %>
 
+<%# ===== FIND YOUR REPRESENTATIVES ===== %>
+<section class="bg-gray-50 py-12">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-6">
+      <h2 class="text-2xl font-extrabold text-utah-navy">
+        Find <span class="text-utah-red">Your</span> Representatives
+      </h2>
+      <p class="mt-1 text-gray-600">Enter your address to see exactly who represents you in Congress and the Utah Legislature.</p>
+    </div>
+
+    <turbo-frame id="rep-lookup">
+      <%= render "lookups/form" %>
+    </turbo-frame>
+  </div>
+</section>
+
 <%# ===== OTHER ISSUES ===== %>
 <% if @other_issues.any? %>
   <section class="bg-white py-12">

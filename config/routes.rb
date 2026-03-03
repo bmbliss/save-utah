@@ -14,4 +14,7 @@ Rails.application.routes.draw do
 
   # --- Bills ---
   resources :bills, only: [:index, :show]
+
+  # --- Address Lookup (Find Your Reps) ---
+  post "lookup", to: "lookups#create"
 end

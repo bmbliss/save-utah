@@ -1,8 +1,8 @@
 # Representatives System
 
 **Status:** Implemented
-**Version:** 1.0
-**Last Updated:** 2026-03-02
+**Version:** 1.1
+**Last Updated:** 2026-03-03
 
 ---
 
@@ -22,8 +22,9 @@ Public-facing feature for browsing and viewing Utah elected officials — from t
 ### 1.3 Non-Goals
 
 - Editing or managing representative data (admin panel)
-- District-based "find my rep" lookup (future enhancement)
 - Representative comparison views (future enhancement)
+
+> **Note:** District-based "find my rep" is now implemented — see [Address Lookup System](./address-lookup-system.md).
 
 ### 1.4 Related Specifications
 
@@ -31,6 +32,7 @@ Public-facing feature for browsing and viewing Utah elected officials — from t
 - [Data Import System](./data-import-system.md) — How rep data is imported
 - [Action Scripts System](./action-scripts-system.md) — Call/email scripts linked to reps
 - [Frontend System](./frontend-system.md) — Tailwind styling, layout, components
+- [Address Lookup System](./address-lookup-system.md) — "Find My Rep" by address, reuses `_rep_card` partial
 
 ---
 

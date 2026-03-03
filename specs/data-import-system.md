@@ -1,8 +1,8 @@
 # Data Import System
 
 **Status:** Implemented
-**Version:** 1.0
-**Last Updated:** 2026-03-02
+**Version:** 1.1
+**Last Updated:** 2026-03-03
 
 ---
 
@@ -97,11 +97,14 @@ app/services/
 │   ├── legislator_importer.rb       # State legislators
 │   ├── bill_importer.rb             # State bills
 │   └── vote_importer.rb             # State floor votes
-└── open_states/
-    ├── client.rb                    # OpenStates v3 API wrapper
-    ├── people_importer.rb           # Supplementary people data
-    ├── bill_importer.rb             # Fallback bill data
-    └── vote_importer.rb             # PRIMARY source for state votes
+├── open_states/
+│   ├── client.rb                    # OpenStates v3 API wrapper
+│   ├── people_importer.rb           # Supplementary people data
+│   ├── bill_importer.rb             # Fallback bill data
+│   └── vote_importer.rb             # PRIMARY source for state votes
+└── census_geocoder/
+    ├── client.rb                    # US Census Geocoder API wrapper (no auth needed)
+    └── district_lookup.rb           # Address → districts → matching representatives
 
 lib/tasks/
 └── import.rake                      # Rake task definitions
@@ -244,6 +247,7 @@ end
 | `directOrderName` | `full_name` | Fallback to "firstName lastName" |
 | `partyName` | `party` | Normalized |
 | `terms.current.chamber` | `position_type` | "Senate" → `us_senator`, "House" → `us_representative` |
+| `terms.current.stateCode` | `state` | Direct (e.g., "UT") |
 | `terms.current.district` | `district` | Direct |
 | `depiction.imageUrl` | `photo_url` | Available on list and detail |
 | `officialWebsiteUrl` | `website_url` | Detail only |
@@ -253,6 +257,7 @@ end
 
 **Derived fields:**
 - `level` → always `federal`
+- `state` → extracted from `terms.current.stateCode` (e.g., `"UT"`)
 - `title` → "U.S. Senator" or "U.S. Representative, District N"
 - `chamber` → "Senate" or "House"
 
@@ -525,4 +530,5 @@ For the MVP, synchronous rake tasks are simpler and sufficient. Data changes inf
 - Congress.gov services: `app/services/congress_gov/`
 - Utah Legislature services: `app/services/utah_legislature/`
 - OpenStates services: `app/services/open_states/`
+- Census Geocoder services: `app/services/census_geocoder/` (used by address lookup, not import tasks)
 - Rake tasks: `lib/tasks/import.rake`

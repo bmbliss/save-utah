@@ -1,5 +1,5 @@
 <%# Shared representative card partial — used on homepage and index %>
-<%= link_to representative_path(representative), class: "block bg-white rounded-xl shadow-sm border border-utah-sand-dark hover:shadow-md hover:border-utah-gold transition-all group overflow-hidden" do %>
+<%= link_to representative_path(representative), class: "block bg-white rounded-xl shadow-sm border border-utah-sand-dark hover:shadow-md hover:border-utah-gold transition-all group overflow-hidden", data: { turbo_frame: "_top" } do %>
   <div class="p-5">
     <div class="flex items-center gap-4">
       <%# Photo / initials %>
@@ -27,7 +27,7 @@
         <%= representative.party_abbrev %>
       </span>
       <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-utah-sand text-utah-navy">
-        <%= representative.level_federal? ? "Federal" : "State" %>
+        <%= representative.level_federal? ? "Federal" : "State" %><%= representative.state.present? ? " — #{representative.state}" : "" %>
       </span>
       <% if representative.district.present? %>
         <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-utah-sand text-utah-navy">

@@ -1,0 +1,16 @@
+<%# Address lookup form — submits via Turbo Frame to show results inline %>
+<%= form_with url: lookup_path, method: :post, data: { controller: "address-lookup", turbo_frame: "rep-lookup" }, class: "flex flex-col sm:flex-row gap-3" do |f| %>
+  <div class="flex-1">
+    <%= f.text_field :address,
+      value: local_assigns[:address],
+      placeholder: "Enter your Utah address (e.g. 350 N State St, Salt Lake City, UT 84103)",
+      required: true,
+      class: "w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-utah-red focus:border-utah-red text-gray-900 placeholder-gray-400",
+      data: { address_lookup_target: "input" } %>
+  </div>
+  <button type="submit"
+    class="px-6 py-3 rounded-lg bg-utah-red text-white font-bold hover:bg-utah-red-dark transition-colors shadow-sm whitespace-nowrap"
+    data-address_lookup_target="button">
+    Find My Reps
+  </button>
+<% end %>

@@ -1,8 +1,8 @@
 # Frontend System
 
 **Status:** Implemented
-**Version:** 1.0
-**Last Updated:** 2026-03-02
+**Version:** 1.1
+**Last Updated:** 2026-03-03
 
 ---
 
@@ -67,7 +67,12 @@ app/
 │   └── controllers/
 │       ├── application.js        # Stimulus app initialization
 │       ├── index.js              # Eager controller loading
-│       └── mobile_nav_controller.js  # Hamburger toggle
+│       ├── mobile_nav_controller.js   # Hamburger toggle
+│       ├── share_controller.js        # Web Share API + clipboard fallback
+│       ├── address_lookup_controller.js # Loading state for rep lookup form
+│       ├── clipboard_controller.js    # Copy-to-clipboard
+│       ├── script_tabs_controller.js  # Call/text/email script tab switching
+│       └── rep_card_controller.js     # Rep card interactions
 └── views/
     ├── layouts/
     │   └── application.html.erb  # Main layout (navbar + footer)
@@ -80,6 +85,9 @@ app/
     ├── bills/
     │   ├── index.html.erb        # Bill listing
     │   └── show.html.erb         # Bill detail
+    ├── lookups/
+    │   ├── _form.html.erb        # Address lookup form partial
+    │   └── create.html.erb       # Turbo Frame response (results/error)
     └── shared/
         ├── _rep_card.html.erb    # Representative card partial
         ├── _bill_card.html.erb   # Bill card partial
@@ -272,9 +280,30 @@ import "controllers"
 | Action | `toggle()` — toggles `hidden` class |
 | Trigger | Hamburger button (`data-action="click->mobile-nav#toggle"`) |
 
-This is the only Stimulus controller in the application. All other interactivity is handled by Turbo or native HTML (form submissions, links).
+### 7.3 Share Controller
 
-### 7.3 Pagination
+**File:** `app/javascript/controllers/share_controller.js`
+
+Uses the Web Share API with a copy-to-clipboard fallback. Values (`title`, `text`, `url`) are passed via Stimulus values.
+
+### 7.4 Address Lookup Controller
+
+**File:** `app/javascript/controllers/address_lookup_controller.js`
+
+Handles loading state for the "Find My Reps" form:
+
+| Event | Action |
+|-------|--------|
+| `turbo:submit-start` | Disable button, text → "Looking up...", add `opacity-60 cursor-wait` |
+| `turbo:submit-end` | Restore original text, re-enable, remove opacity classes |
+
+### 7.5 Turbo Frames
+
+The address lookup feature uses Turbo Frames for inline form submission and response. The homepage contains a `<turbo-frame id="rep-lookup">` that wraps the form. The form's `data-turbo-frame="rep-lookup"` attribute targets this frame, and the response (`lookups/create.html.erb`) wraps its content in a matching frame.
+
+Rep card links inside the frame use `data: { turbo_frame: "_top" }` to break out of the frame for full-page navigation to rep show pages.
+
+### 7.6 Pagination
 
 Pagy's `series_nav_js` generates JavaScript-powered pagination links. No custom Stimulus controller needed.
 
@@ -339,6 +368,10 @@ All public-facing URLs use human-readable slugs:
 ├─────────────────────────────────────────────────────────────┤
 │  TAKE ACTION                                                 │
 │  4 featured action script cards (2-col grid)                │
+├─────────────────────────────────────────────────────────────┤
+│  FIND YOUR REPRESENTATIVES (always visible)                  │
+│  Address input + "Find My Reps" button (Turbo Frame)        │
+│  Results: Federal reps / State legislators / Executives     │
 ├─────────────────────────────────────────────────────────────┤
 │  WHY SAVE UTAH (navy bg section)                             │
 │  Mission statement, nonpartisan commitment                  │

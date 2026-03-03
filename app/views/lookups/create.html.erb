@@ -1,0 +1,85 @@
+<turbo-frame id="rep-lookup">
+  <div class="max-w-4xl mx-auto">
+    <%# Re-render the form pre-filled with the submitted address %>
+    <%= render "lookups/form", address: @address %>
+
+    <% if @error.present? %>
+      <%# Error message %>
+      <div class="mt-6 p-4 rounded-lg bg-red-50 border border-red-200">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-red-700 font-medium"><%= @error %></p>
+        </div>
+      </div>
+
+    <% elsif @representatives.present? %>
+      <%# Results grouped by level %>
+      <div class="mt-8 space-y-8">
+
+        <%# --- Federal --- %>
+        <% federal = @representatives.select(&:level_federal?) %>
+        <% if federal.any? %>
+          <div>
+            <h3 class="text-lg font-bold text-utah-navy mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-utah-red"></span>
+              Your Federal Representatives
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <% federal.each do |rep| %>
+                <%= render "shared/rep_card", representative: rep %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <%# --- State Legislature --- %>
+        <% state_leg = @representatives.select { |r| r.state_senator? || r.state_representative? } %>
+        <% if state_leg.any? %>
+          <div>
+            <h3 class="text-lg font-bold text-utah-navy mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-utah-gold"></span>
+              Your State Legislators
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <% state_leg.each do |rep| %>
+                <%= render "shared/rep_card", representative: rep %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <%# --- Statewide Executives --- %>
+        <% execs = @representatives.select { |r| r.governor? || r.lt_governor? || r.attorney_general? || r.state_auditor? || r.state_treasurer? } %>
+        <% if execs.any? %>
+          <div>
+            <h3 class="text-lg font-bold text-utah-navy mb-3 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-utah-navy"></span>
+              Statewide Executives
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <% execs.each do |rep| %>
+                <%= render "shared/rep_card", representative: rep %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+    <% elsif @address.present? %>
+      <%# District matched but no reps found in our database %>
+      <div class="mt-6 p-4 rounded-lg bg-amber-50 border border-amber-200">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-amber-700 font-medium">
+            We found your districts but don't have matching representatives in our database yet.
+            Our data is still being imported — check back soon!
+          </p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</turbo-frame>

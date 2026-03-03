@@ -1,8 +1,8 @@
 # Save Utah — Architecture
 
 **Status:** Implemented
-**Version:** 1.0
-**Last Updated:** 2026-03-02
+**Version:** 1.1
+**Last Updated:** 2026-03-03
 
 ---
 
@@ -48,6 +48,10 @@ Public-facing civic engagement platform that tracks Utah elected officials (stat
 │  ├─ member_importer  ├─ legislator_imp   ├─ people   │
 │  ├─ bill_importer    ├─ bill_importer    └─ bill_imp │
 │  └─ vote_importer    └─ vote_importer                │
+│                                                       │
+│  census_geocoder/    (address lookup, not imports)    │
+│  ├─ client.rb        US Census Geocoder API          │
+│  └─ district_lookup  address → districts → reps      │
 └──────────────────────┬───────────────────────────────┘
                        │ rake import:*
                        ▼
@@ -66,6 +70,8 @@ Public-facing civic engagement platform that tracks Utah elected officials (stat
 │                     (index, show + vote breakdown)     │
 │                     IssuesController                  │
 │                     (index, show/blast + scorecard)    │
+│                     LookupsController                 │
+│                     (create — address lookup)          │
 └──────────────────────┬───────────────────────────────┘
                        │
                        ▼
@@ -99,7 +105,8 @@ app/
 │   ├── api_client.rb            # Base Faraday HTTP client
 │   ├── congress_gov/            # Federal data (3 importers)
 │   ├── utah_legislature/        # State data (3 importers)
-│   └── open_states/             # Fallback data (2 importers)
+│   ├── open_states/             # Fallback data (2 importers)
+│   └── census_geocoder/         # Address lookup (client + district_lookup)
 └── views/
     ├── layouts/application.html.erb
     ├── pages/                   # home, about
@@ -189,9 +196,9 @@ app/
 
 ### Phase 3 — Enhanced UX
 
-- [ ] **Turbo Frames** — filter reps/bills without full page reload
+- [x] **Turbo Frames** — used for inline address lookup results on homepage
 - [ ] **Full-text search** — pg_search gem or PostgreSQL `tsvector` for better search
-- [ ] **District lookup** — "Find my rep" by address/zip using Google Civic API
+- [x] **District lookup** — "Find my rep" by address using US Census Geocoder (see [address-lookup-system.md](./address-lookup-system.md))
 - [ ] **Email notifications** — let users subscribe to bill updates (requires auth)
 
 ### Phase 4 — Scale & Performance

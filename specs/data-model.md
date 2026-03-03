@@ -1,8 +1,8 @@
 # Data Model
 
 **Status:** Implemented
-**Version:** 1.0
-**Last Updated:** 2026-03-02
+**Version:** 1.1
+**Last Updated:** 2026-03-03
 
 ---
 
@@ -141,6 +141,7 @@ enum :level, { federal: 0, state: 1 }, prefix: true
 | `twitter_handle` | `string` | | Twitter/X handle (without @) |
 | `facebook_url` | `string` | | Facebook profile URL |
 | `office_address` | `text` | | Office mailing address |
+| `state` | `string` | indexed | Two-letter state code (e.g., "UT"). Used to filter Utah reps from non-Utah reps in the database. |
 | `active` | `boolean` | DEFAULT true | Currently in office |
 | `bioguide_id` | `string` | UNIQUE (conditional) | Congress.gov Biographical Directory ID |
 | `utah_leg_id` | `string` | UNIQUE (conditional) | Utah Legislature API ID |
@@ -444,6 +445,7 @@ enum :popular_position, { yes: 0, no: 1 }
 | `index_representatives_on_level` | `level` | |
 | `index_representatives_on_party` | `party` | |
 | `index_representatives_on_active` | `active` | |
+| `index_representatives_on_state` | `state` | |
 | `index_representatives_on_bioguide_id` | `bioguide_id` | `unique: true, where: "bioguide_id IS NOT NULL"` |
 | `index_representatives_on_utah_leg_id` | `utah_leg_id` | `unique: true, where: "utah_leg_id IS NOT NULL"` |
 | `index_representatives_on_openstates_id` | `openstates_id` | `unique: true, where: "openstates_id IS NOT NULL"` |
@@ -534,6 +536,6 @@ Scripts can be general-purpose (no rep or bill), linked to a specific rep, linke
 ## 7. Implementation Notes
 
 - Schema file: `db/schema.rb`
-- Migrations: `db/migrate/20260302170709_create_representatives.rb` through `20260302170743_create_featured_items.rb`
+- Migrations: `db/migrate/20260302170709_create_representatives.rb` through `20260302170743_create_featured_items.rb`, plus `20260303165905_add_state_to_representatives.rb`
 - Models: `app/models/*.rb`
 - Seeds: `db/seeds.rb`

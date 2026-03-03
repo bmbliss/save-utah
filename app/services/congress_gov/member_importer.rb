@@ -69,7 +69,8 @@ module CongressGov
       else :us_representative
       end
 
-      # District from current term
+      # State + district from current term
+      state_code = current_term&.dig("stateCode")
       district = current_term&.dig("district")
 
       # Build title
@@ -106,6 +107,7 @@ module CongressGov
         title: title,
         position_type: position_type,
         level: :federal,
+        state: state_code || "UT",
         chamber: chamber == "Senate" ? "Senate" : "House",
         party: normalize_party(detail["partyName"] || list_data["partyName"]),
         district: district&.to_s,

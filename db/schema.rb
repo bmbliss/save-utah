@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_034214) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_03_165905) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -124,6 +124,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_034214) do
     t.string "photo_url"
     t.integer "position_type"
     t.string "slug"
+    t.string "state"
     t.string "title"
     t.string "twitter_handle"
     t.datetime "updated_at", null: false
@@ -136,6 +137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_034214) do
     t.index ["party"], name: "index_representatives_on_party"
     t.index ["position_type"], name: "index_representatives_on_position_type"
     t.index ["slug"], name: "index_representatives_on_slug", unique: true
+    t.index ["state"], name: "index_representatives_on_state"
     t.index ["utah_leg_id"], name: "index_representatives_on_utah_leg_id", unique: true, where: "(utah_leg_id IS NOT NULL)"
   end
 
