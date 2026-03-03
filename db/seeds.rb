@@ -368,9 +368,87 @@ puts "\nSeeding featured items..."
   puts "  Spotlight: #{rep.full_name}"
 end
 
+# ============================================================
+# ISSUES (Accountability Scorecards)
+# ============================================================
+puts "\nSeeding issues..."
+
+issues_data = [
+  {
+    name: "Stop Taxpayer Benefits to Illegal Immigrants",
+    icon: "🛑",
+    stance_label: "Protect Taxpayers",
+    against_label: "Funded Illegal Benefits",
+    description: "Utah taxpayers are footing the bill for benefits that go to people who broke the law to get here. Emergency Medicaid, in-state tuition, driver privilege cards — every dollar spent on illegal immigrants is a dollar stolen from Utah families who play by the rules. Our representatives need to choose: do they stand with the citizens who elected them, or do they keep writing blank checks to people who cut the line?",
+    sort_order: 0
+  },
+  {
+    name: "No Driver's Licenses for Illegal Aliens (SAVE Act)",
+    icon: "🗳️",
+    stance_label: "Protect the Ballot Box",
+    against_label: "Enabled Illegal Voting Risk",
+    description: "The SAVE Act would require proof of citizenship to register to vote and prevent states from issuing driver's licenses that can be used as voter ID to illegal aliens. It's common sense: if you're not a citizen, you don't get to vote. Period. Any representative who opposes this is telling you they care more about padding voter rolls than protecting your vote.",
+    sort_order: 1
+  },
+  {
+    name: "End Insider Trading by Members of Congress",
+    icon: "💰",
+    stance_label: "Banned Congressional Trading",
+    against_label: "Protected Insider Profits",
+    description: "Members of Congress sit in classified briefings, get advance notice of regulations, and then trade stocks based on that information. It's insider trading — the same crime that sends regular Americans to prison. The TRUST Act and STOCK Act reforms would ban congressional stock trading. Any rep who votes against these bills is telling you their portfolio matters more than your trust.",
+    sort_order: 2
+  },
+  {
+    name: "No AI Data Centers Without Electric Bill Protections",
+    icon: "⚡",
+    stance_label: "Protected Ratepayers",
+    against_label: "Let Big Tech Raise Your Bills",
+    description: "Tech giants want to build massive AI data centers in Utah that consume as much electricity as entire cities. Without protections, YOUR electric bill goes up to subsidize their server farms. Utah's grid wasn't built for this, and ratepayers shouldn't be stuck with the tab. Any bill that allows new data center construction without rate impact protections is a giveaway to Big Tech at your expense.",
+    sort_order: 3
+  }
+]
+
+issues_data.each do |attrs|
+  issue = Issue.find_or_initialize_by(name: attrs[:name])
+  issue.assign_attributes(attrs.merge(active: true))
+  issue.save!
+  puts "  #{issue.icon} #{issue.name}"
+end
+
+# Link sample bills to issues for demo purposes
+puts "\nLinking bills to issues..."
+
+# Link the efficiency bill to the taxpayer issue
+taxpayer_issue = Issue.find_by(name: "Stop Taxpayer Benefits to Illegal Immigrants")
+if taxpayer_issue && efficiency_bill
+  ib = IssueBill.find_or_initialize_by(issue: taxpayer_issue, bill: efficiency_bill)
+  ib.assign_attributes(popular_position: :yes, sort_order: 0)
+  ib.save!
+  puts "  Linked #{efficiency_bill.bill_number} to #{taxpayer_issue.name}"
+end
+
+# Link the public lands bill to the taxpayer issue (as a secondary bill for demo)
+if taxpayer_issue && public_lands_bill
+  ib = IssueBill.find_or_initialize_by(issue: taxpayer_issue, bill: public_lands_bill)
+  ib.assign_attributes(popular_position: :no, sort_order: 1)
+  ib.save!
+  puts "  Linked #{public_lands_bill.bill_number} to #{taxpayer_issue.name}"
+end
+
+# Link the efficiency bill to the insider trading issue
+insider_issue = Issue.find_by(name: "End Insider Trading by Members of Congress")
+if insider_issue && efficiency_bill
+  ib = IssueBill.find_or_initialize_by(issue: insider_issue, bill: efficiency_bill)
+  ib.assign_attributes(popular_position: :yes, sort_order: 0)
+  ib.save!
+  puts "  Linked #{efficiency_bill.bill_number} to #{insider_issue.name}"
+end
+
 puts "\nSeeding complete!"
 puts "  Representatives: #{Representative.count}"
 puts "  Bills: #{Bill.count}"
 puts "  Votes: #{Vote.count}"
 puts "  Action Scripts: #{ActionScript.count}"
 puts "  Featured Items: #{FeaturedItem.count}"
+puts "  Issues: #{Issue.count}"
+puts "  Issue-Bill Links: #{IssueBill.count}"

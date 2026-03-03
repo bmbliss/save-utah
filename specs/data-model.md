@@ -10,7 +10,7 @@
 
 ### 1.1 Purpose
 
-Defines the PostgreSQL database schema powering Save Utah — five tables that track elected officials, legislation, voting records, citizen action scripts, and homepage curation.
+Defines the PostgreSQL database schema powering Save Utah — seven tables that track elected officials, legislation, voting records, policy issues with accountability scorecards, citizen action scripts, and homepage curation.
 
 ### 1.2 Goals
 
@@ -18,6 +18,7 @@ Defines the PostgreSQL database schema powering Save Utah — five tables that t
 - Link representatives to bills through a `Vote` join table with position tracking
 - Support actionable call/email scripts with template rendering
 - Enable flexible homepage curation via polymorphic `FeaturedItem`
+- Curate policy issues and generate accountability scorecards from vote data
 
 ### 1.3 Non-Goals
 
@@ -31,6 +32,7 @@ Defines the PostgreSQL database schema powering Save Utah — five tables that t
 - [Data Import System](./data-import-system.md) — How data flows into these models
 - [Representatives System](./representatives-system.md) — How reps are queried and displayed
 - [Bills System](./bills-system.md) — How bills are queried and displayed
+- [Issues System](./issues-system.md) — Issue scorecards and accountability scoring
 
 ---
 
@@ -53,18 +55,18 @@ Defines the PostgreSQL database schema powering Save Utah — five tables that t
 │ district            │                                     │ session_year        │
 │ photo_url           │                                     │ session_name        │
 │ phone, email        │                                     │ featured            │
-│ website_url         │          ┌───────────────┐          │ introduced_on       │
-│ twitter_handle      │          │ ActionScript  │          │ last_action_on      │
-│ facebook_url        │── 1:N ───│               │── N:1 ───│ congress_bill_id    │
-│ office_address      │          │ id            │          │ utah_bill_id        │
-│ active              │          │ title         │          │ openstates_bill_id  │
-│ bioguide_id         │          │ script_template│         │ data_source         │
-│ utah_leg_id         │          │ context       │          └─────────────────────┘
-│ openstates_id       │          │ action_type   │                    │
-└─────────────────────┘          │   (enum)      │                    │
-         │                       │ representative│                    │
-         │                       │   _id (FK?)   │                    │
-         │                       │ bill_id (FK?) │          ┌─────────────────────┐
+│ phone_mobile        │          ┌───────────────┐          │ introduced_on       │
+│ phone_work          │          │ ActionScript  │          │ last_action_on      │
+│ phone_home          │── 1:N ───│               │── N:1 ───│ congress_bill_id    │
+│ website_url         │          │ id            │          │ utah_bill_id        │
+│ twitter_handle      │          │ title         │          │ openstates_bill_id  │
+│ facebook_url        │          │ script_template│         │ data_source         │
+│ office_address      │          │ context       │          └─────────────────────┘
+│ active              │          │ action_type   │                    │
+│ bioguide_id         │          │   (enum)      │                    │
+│ utah_leg_id         │          │ representative│                    │
+│ openstates_id       │          │   _id (FK?)   │                    │
+└─────────────────────┘          │ bill_id (FK?) │          ┌─────────────────────┐
          │                       │ active        │          │   FeaturedItem      │
          │                       │ featured      │          │   (polymorphic)     │
          │                       │ sort_order    │          │                     │
@@ -77,6 +79,20 @@ Defines the PostgreSQL database schema powering Save Utah — five tables that t
                                                             │ sort_order          │
                                                             │ active              │
                                                             └─────────────────────┘
+
+┌─────────────────────┐          ┌───────────────┐
+│       Issue         │          │   IssueBill   │
+│                     │──── 1:N ──│   (join)     │── N:1 ──── Bill
+│ id                  │          │ id            │
+│ name                │          │ issue_id (FK) │
+│ slug                │          │ bill_id (FK)  │
+│ description         │          │ popular_      │
+│ stance_label        │          │   position    │
+│ against_label       │          │   (enum)      │
+│ active              │          │ sort_order    │
+│ sort_order          │          └───────────────┘
+│ icon                │
+└─────────────────────┘
 ```
 
 ---
@@ -116,7 +132,10 @@ enum :level, { federal: 0, state: 1 }, prefix: true
 | `party` | `string` | NOT NULL | "Republican", "Democrat", "Independent", etc. |
 | `district` | `string` | | District number or null for statewide offices |
 | `photo_url` | `string` | | URL to official headshot |
-| `phone` | `string` | | Primary phone number |
+| `phone` | `string` | | Primary/office phone number |
+| `phone_mobile` | `string` | | Mobile phone number |
+| `phone_work` | `string` | | Work phone number |
+| `phone_home` | `string` | | Home phone number |
 | `email` | `string` | | Primary email address |
 | `website_url` | `string` | | Official website URL |
 | `twitter_handle` | `string` | | Twitter/X handle (without @) |
@@ -152,6 +171,7 @@ enum :level, { federal: 0, state: 1 }, prefix: true
 | `display_name` | `"#{title} #{full_name}"` | "Governor Spencer Cox" |
 | `party_abbrev` | First letter or "I" for Independent | "R", "D", "I" |
 | `short_label` | `"Sen. #{full_name} (#{party_abbrev})"` | "Sen. Mike Lee (R)" |
+| `phone_numbers` | Array of `{ label:, number: }` hashes | All non-blank phone fields |
 
 **Indexes:**
 - `slug` — unique
@@ -197,6 +217,8 @@ enum :level, { federal: 0, state: 1 }, prefix: true
 - `has_many :representatives, through: :votes`
 - `has_many :action_scripts, dependent: :nullify`
 - `has_many :featured_items, as: :featurable, dependent: :destroy`
+- `has_many :issue_bills, dependent: :destroy`
+- `has_many :issues, through: :issue_bills`
 
 **Scopes:**
 | Scope | Query | Usage |
@@ -345,6 +367,72 @@ enum :section, { hero: 0, spotlight: 1, recent_actions: 2 }
 
 ---
 
+### 3.6 Issue
+
+Represents a curated policy topic with editorial stance labels for accountability scorecards.
+
+**File:** `app/models/issue.rb`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `bigint` | PK, auto | Primary key |
+| `name` | `string` | NOT NULL, UNIQUE | Issue title |
+| `slug` | `string` | UNIQUE | FriendlyId slug from name |
+| `description` | `text` | | Editorial description (aggressive tone) |
+| `stance_label` | `string` | NOT NULL | Green label for aligned votes |
+| `against_label` | `string` | NOT NULL | Red label for opposing votes |
+| `active` | `boolean` | DEFAULT true | Show on site |
+| `sort_order` | `integer` | DEFAULT 0 | Display ordering |
+| `icon` | `string` | | Emoji for visual identity |
+
+**Associations:**
+- `has_many :issue_bills, dependent: :destroy`
+- `has_many :bills, through: :issue_bills`
+
+**Scopes:**
+| Scope | Query |
+|-------|-------|
+| `active` | `where(active: true)` |
+| `ordered` | `order(:sort_order, :name)` |
+
+**Key Methods:**
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `accountability_score(rep, votes_lookup:)` | `{ aligned:, against:, no_vote:, total:, score: }` | Per-rep scoring |
+| `vote_alignment_css(vote, ib)` | CSS classes | Green/red/gray based on alignment |
+| `vote_alignment_label(vote, ib)` | String | stance_label or against_label |
+
+---
+
+### 3.7 IssueBill
+
+Join model linking issues to bills with the "popular position."
+
+**File:** `app/models/issue_bill.rb`
+
+```ruby
+enum :popular_position, { yes: 0, no: 1 }
+```
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `bigint` | PK, auto | Primary key |
+| `issue_id` | `bigint` | FK, NOT NULL | Reference to issue |
+| `bill_id` | `bigint` | FK, NOT NULL | Reference to bill |
+| `popular_position` | `integer` | NOT NULL, DEFAULT 0 | What the people want |
+| `sort_order` | `integer` | DEFAULT 0 | Display ordering |
+
+**Validations:**
+- `issue_id` — unique scoped to `bill_id`
+- `popular_position` — presence required
+
+**Key Methods:**
+| Method | Returns | Example |
+|--------|---------|---------|
+| `popular_position_label` | "Vote YES" or "Vote NO" | Display helper |
+
+---
+
 ## 4. Database Indexes
 
 ### 4.1 Representatives
@@ -380,6 +468,22 @@ enum :section, { hero: 0, spotlight: 1, recent_actions: 2 }
 | `index_votes_on_bill_id` | `bill_id` | |
 | `index_votes_on_rep_and_bill` | `[representative_id, bill_id]` | `unique: true` |
 
+### 4.4 Issues
+
+| Index | Columns | Options |
+|-------|---------|---------|
+| `index_issues_on_slug` | `slug` | `unique: true` |
+| `index_issues_on_active` | `active` | |
+| `index_issues_on_sort_order` | `sort_order` | |
+
+### 4.5 IssueBills
+
+| Index | Columns | Options |
+|-------|---------|---------|
+| `index_issue_bills_on_issue_id` | `issue_id` | |
+| `index_issue_bills_on_bill_id` | `bill_id` | |
+| `index_issue_bills_on_issue_and_bill` | `[issue_id, bill_id]` | `unique: true` |
+
 ---
 
 ## 5. Seed Data
@@ -394,6 +498,8 @@ enum :section, { hero: 0, spotlight: 1, recent_actions: 2 }
 | Votes | 8 | Sample votes linking reps to bills |
 | Action Scripts | 4 | 3 call scripts + 1 email script |
 | Featured Items | 4 | Spotlight items for 4 reps |
+| Issues | 4 | Hot-button policy topics with editorial descriptions |
+| Issue-Bill Links | 3 | Sample bill-to-issue associations |
 
 ---
 

@@ -10,6 +10,8 @@ class Bill < ApplicationRecord
   has_many :representatives, through: :votes
   has_many :action_scripts, dependent: :nullify
   has_many :featured_items, as: :featurable, dependent: :destroy
+  has_many :issue_bills, dependent: :destroy
+  has_many :issues, through: :issue_bills
 
   # --- Validations ---
   validates :title, presence: true

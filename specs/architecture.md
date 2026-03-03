@@ -53,8 +53,8 @@ Public-facing civic engagement platform that tracks Utah elected officials (stat
                        ▼
 ┌──────────────────────────────────────────────────────┐
 │                PostgreSQL Database                    │
-│  representatives ── votes ── bills                   │
-│  action_scripts     featured_items (polymorphic)     │
+│  representatives ── votes ── bills ── issue_bills     │
+│  action_scripts   featured_items   issues            │
 └──────────────────────┬───────────────────────────────┘
                        │
                        ▼
@@ -64,13 +64,16 @@ Public-facing civic engagement platform that tracks Utah elected officials (stat
 │  (home, about)      (index, show + filters)           │
 │                     BillsController                   │
 │                     (index, show + vote breakdown)     │
+│                     IssuesController                  │
+│                     (index, show/blast + scorecard)    │
 └──────────────────────┬───────────────────────────────┘
                        │
                        ▼
 ┌──────────────────────────────────────────────────────┐
 │           Views (Tailwind 4 + ERB)                    │
 │  layouts/application  pages/home  pages/about         │
-│  representatives/     bills/      shared/_partials    │
+│  representatives/     bills/      issues/             │
+│  shared/_partials (cards, scorecard rows)             │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -82,13 +85,16 @@ app/
 │   ├── application_controller.rb
 │   ├── pages_controller.rb
 │   ├── representatives_controller.rb
-│   └── bills_controller.rb
+│   ├── bills_controller.rb
+│   └── issues_controller.rb
 ├── models/
 │   ├── representative.rb        # friendly_id, enums, scopes
 │   ├── bill.rb                  # friendly_id, vote_summary
 │   ├── vote.rb                  # join table, position enum
 │   ├── action_script.rb         # render_script with placeholders
-│   └── featured_item.rb         # polymorphic homepage curation
+│   ├── featured_item.rb         # polymorphic homepage curation
+│   ├── issue.rb                 # curated policy topics with scoring
+│   └── issue_bill.rb            # join table with popular_position
 ├── services/
 │   ├── api_client.rb            # Base Faraday HTTP client
 │   ├── congress_gov/            # Federal data (3 importers)
@@ -99,7 +105,8 @@ app/
     ├── pages/                   # home, about
     ├── representatives/         # index, show
     ├── bills/                   # index, show
-    └── shared/                  # _rep_card, _bill_card, _script_card
+    ├── issues/                  # index, show (blast page)
+    └── shared/                  # _rep_card, _bill_card, _script_card, _issue_card, _accountability_row
 ```
 
 ---
@@ -126,6 +133,15 @@ app/
 │ [REP_NAME] etc  │                      │ hero/spotlight/ │
 └─────────────────┘                      │ recent_actions  │
                                          └─────────────────┘
+
+┌─────────────────┐       ┌───────────┐
+│     Issue       │──┐    │ IssueBill │    ┌──── Bill
+│                 │  └───▶│  (join)   │◀───┘
+│ name, slug      │       │ popular_  │
+│ stance_label    │       │  position │
+│ against_label   │       │ sort_order│
+│ icon            │       └───────────┘
+└─────────────────┘
 ```
 
 ---

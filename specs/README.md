@@ -21,6 +21,7 @@ Design documentation for the Save Utah civic engagement platform — tracking Ut
 |------|------|---------|
 | [representatives-system.md](./representatives-system.md) | [app/controllers/representatives_controller.rb](../app/controllers/representatives_controller.rb), [app/views/representatives/](../app/views/representatives/) | Representative listing, filtering, search, detail pages |
 | [bills-system.md](./bills-system.md) | [app/controllers/bills_controller.rb](../app/controllers/bills_controller.rb), [app/views/bills/](../app/views/bills/) | Bill listing, filtering, vote breakdowns, editorial summaries |
+| [issues-system.md](./issues-system.md) | [app/controllers/issues_controller.rb](../app/controllers/issues_controller.rb), [app/views/issues/](../app/views/issues/) | Issue scorecards, accountability scoring, blast pages |
 | [action-scripts-system.md](./action-scripts-system.md) | [app/models/action_script.rb](../app/models/action_script.rb), [app/views/shared/_script_card.html.erb](../app/views/shared/_script_card.html.erb) | Call/email scripts with template placeholders |
 
 ## Frontend

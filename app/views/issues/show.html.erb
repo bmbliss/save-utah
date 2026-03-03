@@ -1,0 +1,121 @@
+<%# ===== ISSUE BLAST PAGE — Accountability Scorecard ===== %>
+
+<%# Back link %>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+  <%= link_to issues_path, class: "inline-flex items-center text-sm font-semibold text-utah-navy hover:text-utah-red transition-colors" do %>
+    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+    All Issues
+  <% end %>
+</div>
+
+<%# ===== HERO SECTION ===== %>
+<section class="bg-utah-navy mt-4">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+    <div class="text-center">
+      <% if @issue.icon.present? %>
+        <span class="text-5xl"><%= @issue.icon %></span>
+      <% end %>
+      <h1 class="mt-3 text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+        <%= @issue.name %>
+      </h1>
+
+      <% if @issue.description.present? %>
+        <p class="mt-5 max-w-3xl mx-auto text-lg text-gray-300 leading-relaxed">
+          <%= @issue.description %>
+        </p>
+      <% end %>
+
+      <%# Stance badges %>
+      <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+        <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-green-600/20 border border-green-500/40">
+          <span class="w-3 h-3 rounded-full bg-green-500"></span>
+          <span class="text-green-300 font-bold text-sm"><%= @issue.stance_label %></span>
+        </div>
+        <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-600/20 border border-red-500/40">
+          <span class="w-3 h-3 rounded-full bg-red-500"></span>
+          <span class="text-red-300 font-bold text-sm"><%= @issue.against_label %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%# ===== RELATED BILLS ===== %>
+<% if @issue_bills.any? %>
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <h2 class="text-2xl font-extrabold text-utah-navy mb-6">Related Bills</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <% @issue_bills.each do |ib| %>
+        <div class="bg-white rounded-xl shadow-sm border border-utah-sand-dark p-5">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-utah-navy text-white">
+              <%= ib.bill.bill_number %>
+            </span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold
+              <%= ib.yes? ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' %>">
+              The People Want: <%= ib.popular_position_label %>
+            </span>
+          </div>
+          <%= link_to bill_path(ib.bill), class: "font-bold text-utah-navy hover:text-utah-red transition-colors" do %>
+            <%= ib.bill.title %>
+          <% end %>
+          <% if ib.bill.editorial_summary.present? %>
+            <p class="mt-2 text-sm text-gray-600 line-clamp-2"><%= ib.bill.editorial_summary %></p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<%# ===== ACCOUNTABILITY SCORECARD TABLE ===== %>
+<% if @representatives.any? %>
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <h2 class="text-2xl font-extrabold text-utah-navy mb-2">Accountability Scorecard</h2>
+    <p class="text-gray-600 mb-6">Sorted by score — worst offenders first. Green = stood with the people. Red = sold you out.</p>
+
+    <div class="bg-white rounded-xl shadow-sm border border-utah-sand-dark overflow-hidden">
+      <%# Horizontally scrollable wrapper for mobile %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-utah-navy text-white text-left">
+              <th class="sticky left-0 z-10 bg-utah-navy px-4 py-3 font-bold whitespace-nowrap">Representative</th>
+              <% @issue_bills.each do |ib| %>
+                <th class="px-4 py-3 font-bold whitespace-nowrap text-center min-w-[120px]">
+                  <%= ib.bill.bill_number %>
+                </th>
+              <% end %>
+              <th class="px-4 py-3 font-bold whitespace-nowrap text-center">Score</th>
+              <th class="px-4 py-3 font-bold whitespace-nowrap">Contact</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <% @representatives.each do |rep| %>
+              <%= render "shared/accountability_row",
+                representative: rep,
+                issue: @issue,
+                issue_bills: @issue_bills,
+                votes_lookup: @votes_lookup,
+                score: @scores[rep.id] %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+<% end %>
+
+<%# ===== TAKE ACTION ===== %>
+<% if @action_scripts.any? %>
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <h2 class="text-2xl font-extrabold text-utah-navy mb-6">Take Action</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <% @action_scripts.each do |script| %>
+        <%= render "shared/script_card", script: script %>
+      <% end %>
+    </div>
+  </section>
+<% end %>

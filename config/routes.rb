@@ -6,6 +6,9 @@ Rails.application.routes.draw do
   root "pages#home"
   get "about", to: "pages#about"
 
+  # --- Issues (accountability scorecards) ---
+  resources :issues, only: [:index, :show]
+
   # --- Representatives ---
   resources :representatives, only: [:index, :show]
 

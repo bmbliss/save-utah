@@ -1,0 +1,28 @@
+<%# ===== ISSUES INDEX — "The Issues That Matter" ===== %>
+<section class="bg-utah-navy py-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h1 class="text-4xl sm:text-5xl font-black text-white tracking-tight">
+      The Issues That <span class="text-utah-red">Matter</span>
+    </h1>
+    <p class="mt-4 max-w-2xl mx-auto text-lg text-gray-300 leading-relaxed">
+      These are the policies Utah citizens care about most. We track how every representative votes
+      and hold them accountable. No spin. No excuses.
+    </p>
+  </div>
+</section>
+
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <% if @issues.any? %>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <% @issues.each do |issue| %>
+        <%= render "shared/issue_card", issue: issue %>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="bg-white rounded-xl shadow-sm border border-utah-sand-dark p-12 text-center">
+      <div class="text-5xl mb-4">📋</div>
+      <h3 class="text-xl font-bold text-utah-navy">Issues coming soon</h3>
+      <p class="mt-2 text-gray-600">We're building accountability scorecards for the issues that matter most to Utah.</p>
+    </div>
+  <% end %>
+</section>

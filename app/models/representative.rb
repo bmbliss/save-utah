@@ -77,6 +77,16 @@ class Representative < ApplicationRecord
     "#{prefix} #{full_name} (#{party_abbrev})"
   end
 
+  # Returns an array of { label:, number: } hashes for all non-blank phone fields
+  def phone_numbers
+    numbers = []
+    numbers << { label: "Office", number: phone } if phone.present?
+    numbers << { label: "Mobile", number: phone_mobile } if phone_mobile.present?
+    numbers << { label: "Work", number: phone_work } if phone_work.present?
+    numbers << { label: "Home", number: phone_home } if phone_home.present?
+    numbers
+  end
+
   private
 
   def set_full_name

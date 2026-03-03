@@ -1,0 +1,36 @@
+<%# Shared issue card partial — used on homepage and issues index %>
+<%= link_to issue_path(issue), class: "block bg-white rounded-xl shadow-sm border-2 border-utah-sand-dark hover:shadow-lg hover:border-utah-red transition-all group overflow-hidden" do %>
+  <div class="p-6">
+    <%# Icon + Name %>
+    <div class="flex items-start gap-3">
+      <% if issue.icon.present? %>
+        <span class="text-3xl flex-shrink-0"><%= issue.icon %></span>
+      <% end %>
+      <div class="min-w-0">
+        <h3 class="text-xl font-extrabold text-utah-navy group-hover:text-utah-red transition-colors leading-tight">
+          <%= issue.name %>
+        </h3>
+      </div>
+    </div>
+
+    <%# Description preview %>
+    <% if issue.description.present? %>
+      <p class="mt-3 text-sm text-gray-600 leading-relaxed line-clamp-3">
+        <%= strip_tags(issue.description) %>
+      </p>
+    <% end %>
+
+    <%# Footer: bill count + CTA %>
+    <div class="mt-4 flex items-center justify-between">
+      <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-utah-navy text-white">
+        <%= pluralize(issue.bills.count, "bill") %> tracked
+      </span>
+      <span class="text-sm font-bold text-utah-red group-hover:text-utah-red-dark transition-colors flex items-center gap-1">
+        View Scorecard
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+<% end %>

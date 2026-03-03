@@ -6,6 +6,9 @@ class PagesController < ApplicationController
       keywords: "Utah, representatives, voting records, bills, civic engagement, government transparency"
     )
 
+    # Issues for "Issues That Matter" section
+    @issues = Issue.active.ordered.limit(4)
+
     # Hero featured items
     @hero_items = FeaturedItem.heroes.includes(:featurable).limit(3)
 

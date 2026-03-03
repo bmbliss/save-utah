@@ -117,13 +117,15 @@ All service clients inherit from `ApiClient`, which provides:
 
 ```ruby
 class ApiClient
+  MAX_RETRIES = 3
+
   # Subclasses override:
   #   base_url          — API root URL
   #   configure_connection — custom Faraday middleware
 
   # Provides:
   #   connection         — configured Faraday instance
-  #   get(path, params)  — HTTP GET with error handling
+  #   get(path, params)  — HTTP GET with error handling + retry
   #   log(message)       — stdout logging for import progress
 end
 ```
@@ -135,13 +137,16 @@ end
 | Response format | JSON (auto-parsed) |
 | Timeout | Default Faraday timeouts |
 
+**Rate Limit Retry:**
+On HTTP 429 (Too Many Requests), the client retries up to `MAX_RETRIES` (3) times with exponential backoff (2s, 4s, 8s). If all retries are exhausted, `RateLimitError` is raised.
+
 **Error Classes:**
 
 | Error | When Raised |
 |-------|-------------|
-| `ApiClient::RateLimitError` | HTTP 429 response |
+| `ApiClient::RateLimitError` | HTTP 429 after 3 retries with backoff |
 | `ApiClient::NotFoundError` | HTTP 404 response |
-| `ApiClient::ApiError` | All other non-2xx responses |
+| `ApiClient::ApiError` | All other non-2xx responses (includes response body in message for debugging) |
 
 ---
 
@@ -193,7 +198,7 @@ end
 |--------|----------|---------|
 | `utah_people(chamber:)` | `GET /people?jurisdiction=Utah` | Array of people (chamber must be "upper" or "lower") |
 | `person(id)` | `GET /people/{id}` | Single person detail |
-| `utah_bills(session, page, per_page, include_votes:)` | `GET /bills?jurisdiction=Utah` | Paginated bills (pass `include_votes: true` for embedded vote data) |
+| `utah_bills(session, page, per_page, include_votes:)` | `GET /bills?jurisdiction=Utah` | Paginated bills (pass `include_votes: true` for embedded vote data). **`per_page` capped at 20** (OpenStates max). Default: 20. |
 | `bill(id, include_votes:)` | `GET /bills/{id}` | Single bill detail |
 
 ---
@@ -358,15 +363,27 @@ end
 - **PRIMARY source for state votes** (Utah Legislature API has no dedicated vote endpoints)
 - Fetches bills with `include: "votes"` to get embedded vote data
 - Each bill response contains `votes[]` with individual vote records
-- Matches voters to Representatives via `openstates_id` (preferred) or name (fallback)
-- Links to existing `Bill` records via `openstates_bill_id` or `bill_number`
+- **Targets completed sessions** — `DEFAULT_SESSIONS = ["2024", "2023"]` because OpenStates has no vote data for current/ongoing sessions
+- Accepts `sessions:` (array of session identifiers) and `pages_per_session:` params
+- 1-second delay between API pages to respect rate limits
+
+**Bill Matching:**
+1. Match by `openstates_bill_id` (if previously cross-referenced)
+2. Match by exact `bill_number` + `level: :state`
+3. **Normalize bill number:** converts OpenStates format (`"HB 1"`) to Utah Legislature format (`"HB0001"`) via `normalize_bill_number` — strips spaces, zero-pads the number to 4 digits
+
+**Voter Matching:**
+1. Match by `openstates_id` (OCD person ID) — preferred
+2. Parse abbreviated voter name (`"Snider, C."` → last name + first initial) and match against Representatives by `last_name` + `first_name` initial
+3. If only one rep with that last name, use them directly
+4. **Backfills `openstates_id`** on matched Representatives for faster future lookups
 
 **Position Normalization (field: `option`):**
 | API Value | Model Position |
 |-----------|----------------|
 | `"yes"`, `"yea"`, `"aye"` | `yes` |
 | `"no"`, `"nay"` | `no` |
-| `"absent"`, `"excused"`, `"not voting"` | `not_voting` |
+| `"absent"`, `"excused"`, `"not voting"`, `"other"` | `not_voting` |
 | `"abstain"` | `abstain` |
 | `"present"` | `present` |
 
@@ -445,7 +462,7 @@ Bills SHOULD be imported before Votes (federal vote importer auto-creates stub b
 |-----|-------|-------|
 | Congress.gov | 5,000 req/hr | Generous for batch imports |
 | Utah Legislature | Unknown | Not documented; no throttling observed in testing |
-| OpenStates | Varies by tier | Free tier sufficient for Utah-only data |
+| OpenStates | ~10 req/min (free tier), `per_page` max 20 | 1s delay between pages + retry-with-backoff handles this |
 
 ---
 
@@ -455,9 +472,9 @@ Bills SHOULD be imported before Votes (federal vote importer auto-creates stub b
 
 | Error | Trigger | Handling |
 |-------|---------|----------|
-| `RateLimitError` | HTTP 429 | Logged, import continues with next record |
+| `RateLimitError` | HTTP 429 (after 3 retries) | Retried 3× with exponential backoff (2s, 4s, 8s). If exhausted, raised and import aborts. |
 | `NotFoundError` | HTTP 404 | Logged, record skipped |
-| `ApiError` | Other non-2xx | Logged with details, record skipped |
+| `ApiError` | Other non-2xx | Logged with details (includes API response body), record skipped |
 | `ActiveRecord::RecordInvalid` | Validation failure | Logged, import continues |
 
 ### 8.2 Logging
@@ -498,7 +515,7 @@ For the MVP, synchronous rake tasks are simpler and sufficient. Data changes inf
 - [ ] Senate vote parsing (senate.gov XML, not yet in Congress.gov API)
 - [ ] Historical session imports (past congresses and legislative sessions)
 - [ ] Import progress tracking with database-stored timestamps
-- [ ] Retry logic with exponential backoff for rate-limited APIs
+- [x] Retry logic with exponential backoff for rate-limited APIs
 
 ---
 

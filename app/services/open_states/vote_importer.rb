@@ -14,7 +14,7 @@ module OpenStates
   class VoteImporter
     # Sessions known to have vote data in OpenStates.
     # The current/ongoing session usually has none until it closes.
-    DEFAULT_SESSIONS = %w[2024 2023].freeze
+    DEFAULT_SESSIONS = %w[2026 2025].freeze
 
     def initialize
       @client = Client.new

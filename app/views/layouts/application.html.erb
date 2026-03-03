@@ -41,6 +41,8 @@
 
           <%# Desktop nav links %>
           <div class="hidden md:flex items-center space-x-1">
+            <%= link_to "Issues", issues_path,
+                class: "px-4 py-2 rounded-md text-sm font-semibold transition-colors #{request.path.start_with?('/issues') ? 'text-utah-gold bg-utah-navy-dark' : 'text-gray-200 hover:text-white hover:bg-utah-navy-dark'}" %>
             <%= link_to "Representatives", representatives_path,
                 class: "px-4 py-2 rounded-md text-sm font-semibold transition-colors #{request.path.start_with?('/representatives') ? 'text-utah-gold bg-utah-navy-dark' : 'text-gray-200 hover:text-white hover:bg-utah-navy-dark'}" %>
             <%= link_to "Bills", bills_path,
@@ -64,6 +66,7 @@
       <%# Mobile menu (hidden by default) %>
       <div id="mobile-menu" class="md:hidden hidden bg-utah-navy-dark">
         <div class="px-4 pt-2 pb-4 space-y-1">
+          <%= link_to "Issues", issues_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
           <%= link_to "Representatives", representatives_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
           <%= link_to "Bills", bills_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
           <%= link_to "About", about_path, class: "block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:text-white hover:bg-utah-navy" %>
@@ -111,6 +114,7 @@
           <div>
             <h3 class="text-sm font-semibold text-utah-gold uppercase tracking-wider">Navigate</h3>
             <ul class="mt-3 space-y-2">
+              <li><%= link_to "Issues & Scorecards", issues_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>
               <li><%= link_to "Representatives", representatives_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>
               <li><%= link_to "Bills & Votes", bills_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>
               <li><%= link_to "About", about_path, class: "text-sm text-gray-400 hover:text-white transition-colors" %></li>

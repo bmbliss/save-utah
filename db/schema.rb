@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_02_170743) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_02_180003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -73,6 +73,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_170743) do
     t.index ["featurable_type", "featurable_id"], name: "index_featured_items_on_featurable"
   end
 
+  create_table "issue_bills", force: :cascade do |t|
+    t.bigint "bill_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "issue_id", null: false
+    t.integer "popular_position", default: 0, null: false
+    t.integer "sort_order", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["bill_id"], name: "index_issue_bills_on_bill_id"
+    t.index ["issue_id", "bill_id"], name: "index_issue_bills_on_issue_id_and_bill_id", unique: true
+    t.index ["issue_id"], name: "index_issue_bills_on_issue_id"
+  end
+
+  create_table "issues", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "against_label"
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "icon"
+    t.string "name", null: false
+    t.string "slug"
+    t.integer "sort_order", default: 0, null: false
+    t.string "stance_label"
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_issues_on_active"
+    t.index ["slug"], name: "index_issues_on_slug", unique: true
+    t.index ["sort_order"], name: "index_issues_on_sort_order"
+  end
+
   create_table "representatives", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "bioguide_id"
@@ -89,6 +117,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_170743) do
     t.string "openstates_id"
     t.string "party"
     t.string "phone"
+    t.string "phone_home"
+    t.string "phone_mobile"
+    t.string "phone_work"
     t.string "photo_url"
     t.integer "position_type"
     t.string "slug"
@@ -122,6 +153,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_170743) do
 
   add_foreign_key "action_scripts", "bills"
   add_foreign_key "action_scripts", "representatives"
+  add_foreign_key "issue_bills", "bills"
+  add_foreign_key "issue_bills", "issues"
   add_foreign_key "votes", "bills"
   add_foreign_key "votes", "representatives"
 end
